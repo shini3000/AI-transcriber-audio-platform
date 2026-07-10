@@ -1,28 +1,34 @@
-// Cargar variables de entorno desde .env (si existe)
-// Tiene prioridad menor que variables de entorno reales y args CLI
+using Capstone.Application.Interfaces;
+using Capstone.Application.UseCases;
+using Capstone.Infrastructure.FileStorage;
+using Capstone.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
+
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
     DotNetEnv.Env.Load(envPath);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.Configure<MinIOSettings>(
+    builder.Configuration.GetSection(MinIOSettings.SectionName));
+builder.Services.AddScoped<IFileStorageService, MinIOStorageService>();
+
+builder.Services.AddScoped<IAudioFileRepository, AudioFileRepository>();
+
+builder.Services.AddScoped<UploadAudioUseCase>();
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 50_000_000;
+});
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
 
 app.MapControllers();
 
