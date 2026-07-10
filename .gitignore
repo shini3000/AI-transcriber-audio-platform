@@ -33,6 +33,8 @@ x86/
 # VS Code
 .vscode/
 
+.env
+
 # OS
 .DS_Store
 Thumbs.db
