@@ -1,0 +1,38 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstats
+*.sln.ide/
+.vs/
+
+# ASP.NET Core
+appsettings.*.local.json
+**/Properties/launchSettings.json
+
+# Secret management
+secrets.json
+
+# User Secrets
+%APPDATA%\Microsoft\UserSecrets\
+~/.microsoft/usersecrets/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.nupkg
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
