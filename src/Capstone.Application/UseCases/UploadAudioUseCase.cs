@@ -8,28 +8,57 @@ public class UploadAudioUseCase
 {
     private readonly IFileStorageService _storageService;
     private readonly IAudioFileRepository _repository;
+    private readonly IAudioCompressionService _compressionService;
 
-    public UploadAudioUseCase(IFileStorageService storageService, IAudioFileRepository repository)
+    public UploadAudioUseCase(
+        IFileStorageService storageService,
+        IAudioFileRepository repository,
+        IAudioCompressionService compressionService)
     {
         _storageService = storageService;
         _repository = repository;
+        _compressionService = compressionService;
     }
 
     public async Task<UploadAudioResponse> ExecuteAsync(UploadAudioRequest request, CancellationToken cancellationToken = default)
     {
-        var url = await _storageService.UploadAsync(
+        var compressionResult = await _compressionService.CompressAsync(
             request.FileStream,
             request.FileName,
             request.ContentType,
+            cancellationToken);
+
+        await using var compressedStream = compressionResult.CompressedStream;
+
+        var compressedFileName = compressionResult.WasCompressed
+            ? Path.ChangeExtension(request.FileName, ".aac")
+            : request.FileName;
+
+        var compressedContentType = compressionResult.WasCompressed
+            ? "audio/aac"
+            : request.ContentType;
+
+        var url = await _storageService.UploadAsync(
+            compressedStream,
+            compressedFileName,
+            compressedContentType,
             cancellationToken
         );
 
         var audioFile = AudioFile.Create(
-            request.FileName,
-            request.ContentType,
-            request.Size,
-            url
+            compressedFileName,
+            compressedContentType,
+            compressionResult.CompressedSize,
+            url,
+            originalFileName: request.FileName,
+            originalContentType: request.ContentType,
+            originalSize: compressionResult.OriginalSize
         );
+
+        if (compressionResult.WasCompressed)
+        {
+            audioFile.CompressionDurationMs = (long)compressionResult.Duration.TotalMilliseconds;
+        }
 
         await _repository.AddAsync(audioFile, cancellationToken);
 
@@ -38,6 +67,10 @@ public class UploadAudioUseCase
             audioFile.FileName,
             audioFile.StorageUrl,
             audioFile.UploadedAt
-        );
+        )
+        {
+            CompressedSize = compressionResult.CompressedSize,
+            WasCompressed = compressionResult.WasCompressed
+        };
     }
 }
