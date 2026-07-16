@@ -5,4 +5,8 @@ public record UploadAudioResponse(
     string FileName,
     string StorageUrl,
     DateTime UploadedAt
-);
+)
+{
+    public long CompressedSize { get; init; }
+    public bool WasCompressed { get; init; }
+}
