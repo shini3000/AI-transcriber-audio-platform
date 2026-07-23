@@ -1,6 +1,7 @@
 using System.Reflection;
 using Capstone.Application.Interfaces;
 using Capstone.Application.UseCases;
+using Capstone.Infrastructure.Compression;
 using Capstone.Infrastructure.FileStorage;
 using Capstone.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http.Features;
@@ -37,6 +38,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<MinIOSettings>(
     builder.Configuration.GetSection(MinIOSettings.SectionName));
 builder.Services.AddScoped<IFileStorageService, MinIOStorageService>();
+
+builder.Services.Configure<FFmpegCompressionSettings>(
+    builder.Configuration.GetSection(FFmpegCompressionSettings.SectionName));
+builder.Services.AddScoped<IAudioCompressionService, FFmpegCompressionService>();
 
 var minioSection = builder.Configuration.GetSection("MinIO");
 Console.WriteLine($"[Config Debug] MinIO:Endpoint = {minioSection["Endpoint"]}");
