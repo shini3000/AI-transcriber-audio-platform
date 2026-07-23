@@ -9,15 +9,18 @@ public class UploadAudioUseCase
     private readonly IFileStorageService _storageService;
     private readonly IAudioFileRepository _repository;
     private readonly IAudioCompressionService _compressionService;
+    private readonly IAudioEventPublisher _eventPublisher;
 
     public UploadAudioUseCase(
         IFileStorageService storageService,
         IAudioFileRepository repository,
-        IAudioCompressionService compressionService)
+        IAudioCompressionService compressionService,
+        IAudioEventPublisher eventPublisher)
     {
         _storageService = storageService;
         _repository = repository;
         _compressionService = compressionService;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<UploadAudioResponse> ExecuteAsync(UploadAudioRequest request, CancellationToken cancellationToken = default)
@@ -61,6 +64,13 @@ public class UploadAudioUseCase
         }
 
         await _repository.AddAsync(audioFile, cancellationToken);
+
+        // Publicar evento para que el worker procese transcripción + resumen
+        await _eventPublisher.PublishAudioUploadedAsync(
+            audioFile.Id,
+            audioFile.StorageUrl,
+            audioFile.FileName,
+            cancellationToken);
 
         return new UploadAudioResponse(
             audioFile.Id,
