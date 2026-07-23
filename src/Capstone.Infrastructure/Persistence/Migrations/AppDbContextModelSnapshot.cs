@@ -71,6 +71,105 @@ namespace Capstone.Infrastructure.Persistence.Migrations
 
                     b.ToTable("AudioFiles");
                 });
+
+            modelBuilder.Entity("Capstone.Domain.Entities.AudioSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AudioFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SummaryText")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TranscriptionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AudioFileId");
+
+                    b.HasIndex("TranscriptionId")
+                        .IsUnique();
+
+                    b.ToTable("AudioSummaries");
+                });
+
+            modelBuilder.Entity("Capstone.Domain.Entities.AudioTranscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AudioFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FullText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("ProcessingTimeMs")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AudioFileId");
+
+                    b.ToTable("AudioTranscriptions");
+                });
+
+            modelBuilder.Entity("Capstone.Domain.Entities.AudioSummary", b =>
+                {
+                    b.HasOne("Capstone.Domain.Entities.AudioFile", "AudioFile")
+                        .WithMany()
+                        .HasForeignKey("AudioFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Capstone.Domain.Entities.AudioTranscription", "Transcription")
+                        .WithOne("Summary")
+                        .HasForeignKey("Capstone.Domain.Entities.AudioSummary", "TranscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AudioFile");
+
+                    b.Navigation("Transcription");
+                });
+
+            modelBuilder.Entity("Capstone.Domain.Entities.AudioTranscription", b =>
+                {
+                    b.HasOne("Capstone.Domain.Entities.AudioFile", "AudioFile")
+                        .WithMany()
+                        .HasForeignKey("AudioFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AudioFile");
+                });
+
+            modelBuilder.Entity("Capstone.Domain.Entities.AudioTranscription", b =>
+                {
+                    b.Navigation("Summary");
+                });
 #pragma warning restore 612, 618
         }
     }
