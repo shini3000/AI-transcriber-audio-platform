@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { FileDropzone } from './FileDropzone'
+import { LoadingSpinner } from './LoadingSpinner'
 import { ApiError, uploadAudio } from '../services/api'
 import type { UploadResponse } from '../types/api'
 import { formatBytes } from '../lib/formatBytes'
@@ -25,6 +26,8 @@ export function UploadForm() {
 
   const handleSelect = (file: File | null, error: string | null) => {
     setSelection({ file, error })
+    setResult(null)
+    setSubmitError(null)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -65,6 +68,12 @@ export function UploadForm() {
       >
         {isSubmitting ? 'Uploading…' : 'Upload'}
       </button>
+      {isSubmitting && (
+        <div className="upload-form-status" aria-live="polite">
+          <LoadingSpinner size="md" />
+          <span className="upload-form-status-text">Uploading…</span>
+        </div>
+      )}
       {result !== null && (
         <div className="upload-form-result" aria-live="polite">
           <p className="upload-form-result-name">{result.fileName}</p>

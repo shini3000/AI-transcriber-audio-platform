@@ -33,6 +33,18 @@
   outline-offset: 2px;
 }
 
+.upload-form-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.upload-form-status-text {
+  font-size: 0.875rem;
+}
+
 .upload-form-result {
   display: flex;
   flex-direction: column;
