@@ -1,0 +1,118 @@
+import { useRef, useState } from 'react'
+import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
+import { MAX_FILE_SIZE_BYTES, validateAudioFile } from '../types/upload'
+import { formatBytes } from '../lib/formatBytes'
+import './FileDropzone.css'
+
+interface FileDropzoneProps {
+  file: File | null
+  error: string | null
+  onSelect: (file: File | null, error: string | null) => void
+}
+
+export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleFile = (candidate: File | null) => {
+    if (candidate === null) {
+      onSelect(null, null)
+      return
+    }
+    const result = validateAudioFile(candidate)
+    onSelect(result.ok ? candidate : null, result.ok ? null : result.error)
+  }
+
+  const openFileDialog = () => {
+    inputRef.current?.click()
+  }
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    handleFile(event.target.files?.[0] ?? null)
+    event.target.value = ''
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openFileDialog()
+    }
+  }
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return
+    }
+    setIsDragging(false)
+  }
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDragging(false)
+    handleFile(event.dataTransfer.files[0] ?? null)
+  }
+
+  const isClickable = file === null
+
+  return (
+    <div className="file-dropzone-wrap">
+      <div
+        className={`file-dropzone${isDragging ? ' is-dragging' : ''}`}
+        role={isClickable ? 'button' : undefined}
+        tabIndex={isClickable ? 0 : undefined}
+        aria-label={isClickable ? 'Select an audio file to upload' : undefined}
+        onClick={openFileDialog}
+        onKeyDown={handleKeyDown}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleInputChange}
+          hidden
+        />
+        {file ? (
+          <div className="file-dropzone-preview">
+            <div className="file-dropzone-preview-info">
+              <span className="file-dropzone-name">{file.name}</span>
+              <span className="file-dropzone-size">{formatBytes(file.size)}</span>
+            </div>
+            <button
+              type="button"
+              className="file-dropzone-remove"
+              aria-label="Remove selected audio file"
+              onClick={(event) => {
+                event.stopPropagation()
+                handleFile(null)
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="file-dropzone-empty">
+            <p className="file-dropzone-instruction">
+              Drag &amp; drop an audio file here, or click to browse
+            </p>
+            <p className="file-dropzone-hint">
+              Up to {formatBytes(MAX_FILE_SIZE_BYTES)}
+            </p>
+          </div>
+        )}
+      </div>
+      {error !== null && (
+        <p className="file-dropzone-error" aria-live="polite">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}

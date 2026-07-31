@@ -1,8 +1,8 @@
 import { ThemeProvider } from './context/ThemeProvider'
 import { ThemeToggle } from './components/ThemeToggle'
+import { UploadForm } from './components/UploadForm'
 import './App.css'
 
-// ThemeProvider wraps the whole app so any component can use useTheme.
 function App() {
   return (
     <ThemeProvider>
@@ -12,8 +12,10 @@ function App() {
           <ThemeToggle />
         </header>
         <main className="app-main">
-          {/* Future upload area (Phase 2). */}
-          <div className="upload-placeholder" />
+          <section className="upload-section">
+            <h2 className="upload-section-title">Upload a recording</h2>
+            <UploadForm />
+          </section>
         </main>
       </div>
     </ThemeProvider>

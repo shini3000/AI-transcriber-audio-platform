@@ -24,8 +24,13 @@
   padding: var(--space-6);
 }
 
-.upload-placeholder {
-  min-height: 320px;
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-lg);
+.upload-section {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.upload-section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: var(--space-6);
 }
