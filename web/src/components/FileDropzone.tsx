@@ -8,9 +8,15 @@ interface FileDropzoneProps {
   file: File | null
   error: string | null
   onSelect: (file: File | null, error: string | null) => void
+  disabled?: boolean
 }
 
-export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
+export function FileDropzone({
+  file,
+  error,
+  onSelect,
+  disabled = false,
+}: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -24,6 +30,9 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
   }
 
   const openFileDialog = () => {
+    if (disabled) {
+      return
+    }
     inputRef.current?.click()
   }
 
@@ -33,6 +42,9 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       openFileDialog()
@@ -40,6 +52,9 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
   }
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return
+    }
     event.preventDefault()
     setIsDragging(true)
   }
@@ -52,6 +67,9 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
   }
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return
+    }
     event.preventDefault()
     setIsDragging(false)
     handleFile(event.dataTransfer.files[0] ?? null)
@@ -66,6 +84,7 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
         role={isClickable ? 'button' : undefined}
         tabIndex={isClickable ? 0 : undefined}
         aria-label={isClickable ? 'Select an audio file to upload' : undefined}
+        aria-disabled={disabled || undefined}
         onClick={openFileDialog}
         onKeyDown={handleKeyDown}
         onDragOver={handleDragOver}
@@ -89,6 +108,7 @@ export function FileDropzone({ file, error, onSelect }: FileDropzoneProps) {
               type="button"
               className="file-dropzone-remove"
               aria-label="Remove selected audio file"
+              disabled={disabled}
               onClick={(event) => {
                 event.stopPropagation()
                 handleFile(null)
