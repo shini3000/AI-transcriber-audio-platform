@@ -44,38 +44,3 @@
 .upload-form-status-text {
   font-size: 0.875rem;
 }
-
-.upload-form-result {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
-}
-
-.upload-form-result-name {
-  margin: 0;
-  font-weight: 600;
-}
-
-.upload-form-result-size {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
-.upload-form-result-link {
-  color: var(--color-accent);
-}
-
-.upload-form-result-url {
-  margin: 0;
-  color: var(--color-text-muted);
-  overflow-wrap: anywhere;
-}
-
-.upload-form-error {
-  margin: 0;
-  color: var(--color-error);
-}

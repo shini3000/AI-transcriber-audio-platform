@@ -2,9 +2,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { FileDropzone } from './FileDropzone'
 import { LoadingSpinner } from './LoadingSpinner'
+import { UploadResult } from './UploadResult'
+import { UploadError } from './UploadError'
 import { ApiError, uploadAudio } from '../services/api'
 import type { UploadResponse } from '../types/api'
-import { formatBytes } from '../lib/formatBytes'
 import './UploadForm.css'
 
 interface UploadSelection {
@@ -14,10 +15,6 @@ interface UploadSelection {
 
 const EMPTY_SELECTION: UploadSelection = { file: null, error: null }
 
-function isHttpUrl(value: string): boolean {
-  return value.startsWith('http://') || value.startsWith('https://')
-}
-
 export function UploadForm() {
   const [selection, setSelection] = useState<UploadSelection>(EMPTY_SELECTION)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -26,6 +23,12 @@ export function UploadForm() {
 
   const handleSelect = (file: File | null, error: string | null) => {
     setSelection({ file, error })
+    setResult(null)
+    setSubmitError(null)
+  }
+
+  const handleReset = () => {
+    setSelection(EMPTY_SELECTION)
     setResult(null)
     setSubmitError(null)
   }
@@ -74,36 +77,14 @@ export function UploadForm() {
           <span className="upload-form-status-text">Uploading…</span>
         </div>
       )}
-      {result !== null && (
-        <div className="upload-form-result" aria-live="polite">
-          <p className="upload-form-result-name">{result.fileName}</p>
-          {selection.file !== null && (
-            <p className="upload-form-result-size">
-              {formatBytes(selection.file.size)}
-              {result.wasCompressed
-                ? ` → ${formatBytes(result.compressedSize)}`
-                : ''}
-            </p>
-          )}
-          {isHttpUrl(result.storageUrl) ? (
-            <a
-              className="upload-form-result-link"
-              href={result.storageUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open file
-            </a>
-          ) : (
-            <p className="upload-form-result-url">{result.storageUrl}</p>
-          )}
-        </div>
+      {result !== null && selection.file !== null && (
+        <UploadResult
+          result={result}
+          originalSize={selection.file.size}
+          onReset={handleReset}
+        />
       )}
-      {submitError !== null && (
-        <p className="upload-form-error" role="alert">
-          {submitError}
-        </p>
-      )}
+      {submitError !== null && <UploadError message={submitError} />}
     </form>
   )
 }
