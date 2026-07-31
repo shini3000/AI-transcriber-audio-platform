@@ -3,6 +3,7 @@ using Capstone.Application.Interfaces;
 using Capstone.Application.UseCases;
 using Capstone.Infrastructure.Compression;
 using Capstone.Infrastructure.FileStorage;
+using Capstone.Infrastructure.MessageBroker;
 using Capstone.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,9 @@ Console.WriteLine($"[Config Debug] MinIO:Endpoint = {minioSection["Endpoint"]}")
 Console.WriteLine($"[Config Debug] MinIO:AccessKey = {minioSection["AccessKey"]}");
 Console.WriteLine($"[Config Debug] MinIO:SecretKey = {minioSection["SecretKey"]}");
 builder.Services.AddScoped<IAudioFileRepository, AudioFileRepository>();
+builder.Services.Configure<RabbitMQSettings>(
+    builder.Configuration.GetSection(RabbitMQSettings.SectionName));
+builder.Services.AddSingleton<IAudioEventPublisher, RabbitMQEventPublisher>();
 builder.Services.AddScoped<UploadAudioUseCase>();
 builder.Services.AddControllers();
 builder.Services.Configure<FormOptions>(options =>

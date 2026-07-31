@@ -35,6 +35,11 @@ x86/
 
 .env
 
+# Model files
+**/models/*.gguf
+**/models/*.ggml
+**/models/*.bin
+
 # OS
 .DS_Store
 Thumbs.db

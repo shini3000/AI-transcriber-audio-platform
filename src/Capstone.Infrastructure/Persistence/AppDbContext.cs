@@ -6,6 +6,8 @@ namespace Capstone.Infrastructure.Persistence;
 public class AppDbContext : DbContext
 {
     public DbSet<AudioFile> AudioFiles => Set<AudioFile>();
+    public DbSet<AudioTranscription> AudioTranscriptions => Set<AudioTranscription>();
+    public DbSet<AudioSummary> AudioSummaries => Set<AudioSummary>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -52,6 +54,61 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CompressedAt);
 
             entity.Property(e => e.CompressionDurationMs);
+        });
+
+        modelBuilder.Entity<AudioTranscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(e => e.FullText)
+                .IsRequired();
+
+            entity.Property(e => e.ModelName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ProcessingTimeMs)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
+
+            entity.HasOne(e => e.AudioFile)
+                .WithMany()
+                .HasForeignKey(e => e.AudioFileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Summary)
+                .WithOne(s => s.Transcription)
+                .HasForeignKey<AudioSummary>(s => s.TranscriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AudioSummary>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(e => e.SummaryText)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.ModelName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
+
+            entity.HasOne(e => e.AudioFile)
+                .WithMany()
+                .HasForeignKey(e => e.AudioFileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

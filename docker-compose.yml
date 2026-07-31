@@ -48,6 +48,20 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: capstone-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 volumes:
   postgres_data:
   minio_data:
+  rabbitmq_data:
