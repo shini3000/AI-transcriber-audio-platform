@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Capstone.Application\Capstone.Application.csproj" />
     <ProjectReference Include="..\..\src\Capstone.Infrastructure\Capstone.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\services\Capstone.Transcriber\Capstone.Transcriber.csproj" />
   </ItemGroup>
 
 </Project>
