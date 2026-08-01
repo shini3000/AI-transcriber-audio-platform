@@ -13,6 +13,7 @@ public class AudioFile
     public long OriginalSize { get; set; }
     public DateTime? CompressedAt { get; set; }
     public long CompressionDurationMs { get; set; }
+    public DateTime? ProcessedAt { get; set; }
 
     public static AudioFile Create(
         string fileName,

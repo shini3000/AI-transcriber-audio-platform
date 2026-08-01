@@ -8,4 +8,6 @@ namespace Capstone.Application.Interfaces;
 public interface IAudioFileRepository
 {
     Task AddAsync(AudioFile audioFile, CancellationToken cancellationToken = default);
+    Task<AudioFile?> GetByIdAsync(Guid id);
+    Task<bool> MarkProcessedAsync(Guid id, DateTime processedAt);
 }

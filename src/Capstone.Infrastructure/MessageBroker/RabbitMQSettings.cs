@@ -11,4 +11,6 @@ public class RabbitMQSettings
     public string ExchangeName { get; set; } = "capstone.audio";
     public string ExchangeType { get; set; } = "topic";
     public string RoutingKey { get; set; } = "audio.uploaded";
+    public string ProcessedQueueName { get; set; } = "audio.processed.api";
+    public string ProcessedRoutingKey { get; set; } = "audio.processed";
 }

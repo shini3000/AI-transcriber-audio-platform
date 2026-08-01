@@ -1,0 +1,23 @@
+.loading-spinner {
+  display: inline-block;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: loading-spinner-rotate 0.8s linear infinite;
+}
+
+.loading-spinner-sm {
+  width: 14px;
+  height: 14px;
+}
+
+.loading-spinner-md {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes loading-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -6,14 +6,14 @@ API para subir archivos de audio con **compresión automática a AAC** utilizand
 
 | Capa           | Tecnología                                               |
 | -------------- | -------------------------------------------------------- |
-| Runtime        | .NET 10                                                  |
+| Runtime        | .NET 8                                                   |
 | Arquitectura   | Clean Architecture (4 capas)                             |
 | API            | ASP.NET Core Web API (Controllers)                       |
 | ORM            | Entity Framework Core + Npgsql                           |
 | DB             | PostgreSQL                                               |
 | File Store     | MinIO (Minio SDK)                                        |
 | Compresión     | FFmpeg (proceso externo, AAC 128k)                       |
-| Lenguaje       | C# 13                                                    |
+| Lenguaje       | C# 12                                                    |
 
 ## Estructura del proyecto
 
@@ -68,7 +68,7 @@ El audio original se comprime a **AAC @ 128k** antes de almacenarse. Si el archi
 ## Requisitos
 
 ### Local
-- .NET 10 SDK
+- .NET 8 SDK
 - PostgreSQL (local o Docker)
 - MinIO (local o Docker)
 - **FFmpeg** instalado y disponible en PATH

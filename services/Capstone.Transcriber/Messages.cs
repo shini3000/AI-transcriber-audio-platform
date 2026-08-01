@@ -5,3 +5,7 @@ public record AudioUploadedMessage(
     string StorageUrl,
     string FileName
 );
+
+public record AudioProcessedMessage(
+    Guid AudioFileId
+);

@@ -10,6 +10,14 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__ExchangeName: capstone.audio
+      RabbitMQ__RoutingKey: audio.uploaded
+      RabbitMQ__ProcessedQueueName: audio.processed.api
+      RabbitMQ__ProcessedRoutingKey: audio.processed
       MinIO__Endpoint: minio:9000
       MinIO__AccessKey: minioadmin
       MinIO__SecretKey: minioadmin
@@ -19,6 +27,58 @@ services:
       postgres:
         condition: service_started
       minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: capstone-worker
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__ExchangeName: capstone.audio
+      RabbitMQ__RoutingKey: audio.uploaded
+      RabbitMQ__ProcessedRoutingKey: audio.processed
+      MinIO__Endpoint: minio:9000
+      MinIO__AccessKey: minioadmin
+      MinIO__SecretKey: minioadmin
+      MinIO__UseSsl: "false"
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=capstone_audio;Username=postgres;Password=postgres
+      Model__QwenPath: /models/qwen2.5-0.5b-instruct-q8_0.gguf
+      Model__WhisperModelPath: /models/ggml-tiny.bin
+      FFmpeg__FfmpegPath: ffmpeg
+      Transcriber__MaxConcurrency: "2"
+      Transcriber__ShutdownTimeoutSeconds: "15"
+      Transcriber__PollIntervalMs: "500"
+    volumes:
+      # Read-only mount of the local model files (not baked into the image).
+      - ./services/Capstone.Transcriber/models:/models:ro
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: capstone-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
         condition: service_started
 
   postgres:

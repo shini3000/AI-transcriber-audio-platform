@@ -1,0 +1,21 @@
+.upload-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--color-error) 8%, var(--color-surface));
+}
+
+.upload-error-icon {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--color-error);
+  flex-shrink: 0;
+}
+
+.upload-error-message {
+  margin: 0;
+}

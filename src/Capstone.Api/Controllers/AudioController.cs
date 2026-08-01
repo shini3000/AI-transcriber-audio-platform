@@ -20,10 +20,12 @@ public class AudioController : ControllerBase
     ];
 
     private readonly UploadAudioUseCase _useCase;
+    private readonly GetAudioResultUseCase _getResultUseCase;
 
-    public AudioController(UploadAudioUseCase useCase)
+    public AudioController(UploadAudioUseCase useCase, GetAudioResultUseCase getResultUseCase)
     {
         _useCase = useCase;
+        _getResultUseCase = getResultUseCase;
     }
 
     [HttpPost("upload")]
@@ -61,5 +63,21 @@ public class AudioController : ControllerBase
         var response = await _useCase.ExecuteAsync(request, cancellationToken);
 
         return Created(string.Empty, response);
+    }
+
+    [HttpGet("{id}/result")]
+    [ProducesResponseType(typeof(AudioResultResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetResult(string id)
+    {
+        if (!Guid.TryParse(id, out var audioFileId))
+            return BadRequest(new { error = "Invalid audio file id." });
+
+        var response = await _getResultUseCase.ExecuteAsync(audioFileId);
+        if (response is null)
+            return NotFound();
+
+        return Ok(response);
     }
 }
