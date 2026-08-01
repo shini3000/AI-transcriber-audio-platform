@@ -8,7 +8,7 @@ function App() {
     <ThemeProvider>
       <div className="app">
         <header className="app-header">
-          <h1 className="app-title">Capstone Audio Upload</h1>
+          <h1 className="app-title">Capstone Project</h1>
           <ThemeToggle />
         </header>
         <main className="app-main">

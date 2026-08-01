@@ -49,11 +49,24 @@ Console.WriteLine($"[Config Debug] MinIO:Endpoint = {minioSection["Endpoint"]}")
 Console.WriteLine($"[Config Debug] MinIO:AccessKey = {minioSection["AccessKey"]}");
 Console.WriteLine($"[Config Debug] MinIO:SecretKey = {minioSection["SecretKey"]}");
 builder.Services.AddScoped<IAudioFileRepository, AudioFileRepository>();
+builder.Services.AddScoped<IAudioTranscriptionRepository, AudioTranscriptionRepository>();
+builder.Services.AddScoped<IAudioSummaryRepository, AudioSummaryRepository>();
 builder.Services.Configure<RabbitMQSettings>(
     builder.Configuration.GetSection(RabbitMQSettings.SectionName));
 builder.Services.AddSingleton<IAudioEventPublisher, RabbitMQEventPublisher>();
+builder.Services.AddHostedService<AudioProcessedEventConsumer>();
 builder.Services.AddScoped<UploadAudioUseCase>();
+builder.Services.AddScoped<GetAudioResultUseCase>();
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 50_000_000;
@@ -75,6 +88,8 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Capstone API v1");
     options.RoutePrefix = "swagger";
 });
+
+app.UseCors("AllowFrontend");
 
 app.MapControllers();
 

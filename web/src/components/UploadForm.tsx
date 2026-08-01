@@ -2,8 +2,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { FileDropzone } from './FileDropzone'
 import { LoadingSpinner } from './LoadingSpinner'
+import { TranscriptionResult } from './TranscriptionResult'
 import { UploadResult } from './UploadResult'
 import { UploadError } from './UploadError'
+import { useAudioResult } from '../hooks/useAudioResult'
 import { ApiError, uploadAudio } from '../services/api'
 import type { UploadResponse } from '../types/api'
 import './UploadForm.css'
@@ -20,6 +22,8 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<UploadResponse | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const polling = useAudioResult({ audioFileId: result?.id ?? null })
 
   const handleSelect = (file: File | null, error: string | null) => {
     setSelection({ file, error })
@@ -84,6 +88,18 @@ export function UploadForm() {
           onReset={handleReset}
         />
       )}
+      {result !== null && polling.isPolling && (
+        <div className="upload-form-status" aria-live="polite">
+          <LoadingSpinner size="sm" />
+          <span className="upload-form-status-text">
+            Transcribing and summarizing…
+          </span>
+        </div>
+      )}
+      {polling.result !== null && polling.result.status === 'ready' && (
+        <TranscriptionResult result={polling.result} />
+      )}
+      {polling.error !== null && <UploadError message={polling.error} />}
       {submitError !== null && <UploadError message={submitError} />}
     </form>
   )

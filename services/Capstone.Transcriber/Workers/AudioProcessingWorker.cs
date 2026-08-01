@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RabbitMQ.Client;
+using Capstone.Transcriber.Messaging;
 using Capstone.Transcriber.Services;
 
 namespace Capstone.Transcriber.Workers;
@@ -11,8 +12,10 @@ public class AudioProcessingWorker : BackgroundService
     private readonly ILogger<AudioProcessingWorker> _logger;
     private readonly IConfiguration _configuration;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly AudioProcessedPublisher _processedPublisher;
     private readonly string _exchangeName;
     private readonly string _routingKey;
+    private readonly string _processedRoutingKey;
 
     private readonly object _stopLock = new();
     private bool _stopRequested;
@@ -20,13 +23,15 @@ public class AudioProcessingWorker : BackgroundService
     private IServiceScope? _serviceScope;
     private Task[] _workers = [];
 
-    public AudioProcessingWorker(ILogger<AudioProcessingWorker> logger, IConfiguration configuration, IServiceScopeFactory scopeFactory)
+    public AudioProcessingWorker(ILogger<AudioProcessingWorker> logger, IConfiguration configuration, IServiceScopeFactory scopeFactory, AudioProcessedPublisher processedPublisher)
     {
         _logger = logger;
         _configuration = configuration;
         _scopeFactory = scopeFactory;
+        _processedPublisher = processedPublisher;
         _exchangeName = configuration["RabbitMQ:ExchangeName"] ?? "capstone.audio";
         _routingKey = configuration["RabbitMQ:RoutingKey"] ?? "audio.uploaded";
+        _processedRoutingKey = configuration["RabbitMQ:ProcessedRoutingKey"] ?? "audio.processed";
     }
 
     internal static int ResolveConsumerCount(IConfiguration configuration)
@@ -196,6 +201,16 @@ public class AudioProcessingWorker : BackgroundService
         try
         {
             await processor.ProcessAsync(message);
+
+            try
+            {
+                await _processedPublisher.PublishAsync(channel, message.AudioFileId, _processedRoutingKey, _exchangeName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Worker {Worker} could not publish processed event for AudioFileId={AudioFileId}; continuing with ack", workerIndex, message.AudioFileId);
+            }
+
             await channel.BasicAckAsync(deliveryTag, multiple: false);
             _logger.LogInformation("Worker {Worker} successfully processed AudioFileId={AudioFileId}", workerIndex, message.AudioFileId);
         }

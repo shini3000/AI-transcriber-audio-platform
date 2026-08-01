@@ -1,5 +1,6 @@
 using Capstone.Application.Interfaces;
 using Capstone.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Capstone.Infrastructure.Persistence;
 
@@ -16,5 +17,25 @@ public class AudioFileRepository : IAudioFileRepository
     {
         await _context.AudioFiles.AddAsync(audioFile, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<AudioFile?> GetByIdAsync(Guid id)
+    {
+        return await _context.AudioFiles
+            .FirstOrDefaultAsync(f => f.Id == id);
+    }
+
+    public async Task<bool> MarkProcessedAsync(Guid id, DateTime processedAt)
+    {
+        var audioFile = await _context.AudioFiles
+            .FirstOrDefaultAsync(f => f.Id == id);
+
+        if (audioFile is null)
+            return false;
+
+        audioFile.ProcessedAt = processedAt;
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 }

@@ -1,3 +1,4 @@
+using Capstone.Transcriber.Messaging;
 using Capstone.Transcriber.Services;
 using Capstone.Transcriber.Workers;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,7 @@ builder.Services.AddSingleton<IMinioClient>(serviceProvider =>
 builder.Services.AddSingleton<AudioFileDownloader>();
 builder.Services.AddSingleton<AudioTranscriptionService>();
 builder.Services.AddSingleton<AudioSummarizationService>();
+builder.Services.AddSingleton<AudioProcessedPublisher>();
 
 builder.Services.AddScoped<AudioProcessorService>();
 

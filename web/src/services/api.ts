@@ -1,4 +1,4 @@
-import type { UploadResponse } from '../types/api'
+import type { AudioResult, UploadResponse } from '../types/api'
 
 export class ApiError extends Error {
   readonly status: number | undefined
@@ -12,7 +12,8 @@ export class ApiError extends Error {
   }
 }
 
-const UPLOAD_ENDPOINT = '/api/audio/upload'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5069'
+const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/audio/upload`
 
 async function readErrorPayload(response: Response): Promise<unknown> {
   try {
@@ -59,4 +60,29 @@ export async function uploadAudio(file: File): Promise<UploadResponse> {
   }
 
   return (await response.json()) as UploadResponse
+}
+
+export async function getAudioResult(audioFileId: string): Promise<AudioResult> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/audio/${audioFileId}/result`)
+  } catch {
+    throw new ApiError(
+      'Network error: could not reach the API server. Check your connection and try again.',
+    )
+  }
+
+  if (!response.ok) {
+    const payload = await readErrorPayload(response)
+    throw new ApiError(
+      getErrorMessage(
+        payload,
+        `Failed to load the result with status ${response.status}.`,
+      ),
+      response.status,
+      payload,
+    )
+  }
+
+  return (await response.json()) as AudioResult
 }
