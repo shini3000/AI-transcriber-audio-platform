@@ -95,8 +95,7 @@ public class AppDbContext : DbContext
                 .ValueGeneratedNever();
 
             entity.Property(e => e.SummaryText)
-                .IsRequired()
-                .HasMaxLength(50);
+                .IsRequired();
 
             entity.Property(e => e.ModelName)
                 .IsRequired()

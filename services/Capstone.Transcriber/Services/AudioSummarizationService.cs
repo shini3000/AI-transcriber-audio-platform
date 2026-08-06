@@ -31,8 +31,8 @@ public class AudioSummarizationService
 
         if (!File.Exists(modelPath))
         {
-            _logger.LogWarning("Qwen model not found at {Path}. Using first 50 chars as fallback.", modelPath);
-            return TruncateToFirstSentence(text, 50);
+            _logger.LogWarning("Qwen model not found at {Path}. Using first sentence as fallback.", modelPath);
+            return GetFallbackSummary(text);
         }
 
         try
@@ -51,7 +51,7 @@ public class AudioSummarizationService
             _logger.LogDebug("Running inference for summary generation...");
 
             var prompt = $@"<|system|>
-You are a title generator. Given a conversation transcript, generate a short title (max 50 characters) that captures the main topic, like ChatGPT conversation titles.
+You are a title generator. Given a conversation transcript, generate a short title (max 50 characters) that captures the main topic, like ChatGPT or Gemini conversation titles.
 
 <|user|>
 {text}
@@ -68,33 +68,39 @@ You are a title generator. Given a conversation transcript, generate a short tit
             await foreach (var token in executor.InferAsync(prompt, inferenceParams))
             {
                 result += token;
-                if (result.Contains('\n') || result.Length > 100)
+                if (result.Contains('\n') || result.Length > 200)
                     break;
             }
 
-            result = result.Trim().TrimEnd('.', '!', '?');
-            return TruncateToFirstSentence(result, 50);
+            return result.Trim();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "LLamaSharp failed, using fallback truncation");
-            return TruncateToFirstSentence(text, 50);
+            _logger.LogError(ex, "LLamaSharp failed, using fallback summary");
+            return GetFallbackSummary(text);
         }
     }
 
-    private static string TruncateToFirstSentence(string text, int maxLength)
+    private static string GetFallbackSummary(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return "Untitled";
 
         var cleaned = text.Trim();
-        if (cleaned.Length <= maxLength)
-            return cleaned;
-
         var endIdx = cleaned.IndexOfAny(['.', '!', '?', '\n']);
-        if (endIdx > 0 && endIdx <= maxLength)
-            return cleaned[..endIdx].Trim();
+        var firstSentence = endIdx > 0 ? cleaned[..endIdx].Trim() : cleaned;
 
-        return cleaned[..maxLength].Trim();
+        if (firstSentence.Length > 60)
+        {
+            var truncated = firstSentence[..60];
+            var lastSpace = truncated.LastIndexOf(' ');
+            if (lastSpace > 30)
+            {
+                return truncated[..lastSpace].Trim() + "...";
+            }
+            return truncated.Trim() + "...";
+        }
+
+        return firstSentence;
     }
 }

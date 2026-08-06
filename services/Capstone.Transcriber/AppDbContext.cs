@@ -25,7 +25,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.SummaryText).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.SummaryText).IsRequired();
             entity.Property(e => e.ModelName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.CreatedAt).IsRequired();
         });
