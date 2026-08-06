@@ -58,7 +58,7 @@ public class GetAudioResultUseCaseTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenTranscriptionExistsWithoutSummary_ReturnsReadyWithNullSummary()
+    public async Task ExecuteAsync_WhenTranscriptionExistsWithoutSummary_ReturnsPending()
     {
         var fileRepository = new Mock<IAudioFileRepository>();
         fileRepository.Setup(r => r.GetByIdAsync(AudioFileId)).ReturnsAsync(CreateAudioFile());
@@ -81,8 +81,8 @@ public class GetAudioResultUseCaseTests
         var result = await useCase.ExecuteAsync(AudioFileId);
 
         Assert.NotNull(result);
-        Assert.Equal("ready", result!.Status);
-        Assert.NotNull(result.Transcription);
+        Assert.Equal("pending", result!.Status);
+        Assert.Null(result.Transcription);
         Assert.Null(result.Summary);
     }
 

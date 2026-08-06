@@ -34,6 +34,15 @@ public class GetAudioResultUseCase
         }
 
         var summary = transcription.Summary;
+        if (summary is null)
+        {
+            return new AudioResultResponse(
+                "pending",
+                audioFile.Id,
+                audioFile.FileName,
+                null,
+                null);
+        }
 
         return new AudioResultResponse(
             "ready",
@@ -44,11 +53,9 @@ public class GetAudioResultUseCase
                 transcription.ModelName,
                 transcription.ProcessingTimeMs,
                 transcription.CreatedAt),
-            summary is null
-                ? null
-                : new SummaryDto(
-                    summary.SummaryText,
-                    summary.ModelName,
-                    summary.CreatedAt));
+            new SummaryDto(
+                summary.SummaryText,
+                summary.ModelName,
+                summary.CreatedAt));
     }
 }
