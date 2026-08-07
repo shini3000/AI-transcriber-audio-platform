@@ -38,4 +38,18 @@ public class AudioFileRepository : IAudioFileRepository
 
         return true;
     }
+
+    public async Task<List<(AudioFile File, AudioTranscription? Transcription)>> GetAllWithTranscriptionAsync(CancellationToken cancellationToken = default)
+    {
+        var query = from file in _context.AudioFiles
+                    join tx in _context.AudioTranscriptions.Include(t => t.Summary)
+                        on file.Id equals tx.AudioFileId into txGroup
+                    from subTx in txGroup.DefaultIfEmpty()
+                    orderby file.UploadedAt descending
+                    select new { File = file, Transcription = subTx };
+
+        var results = await query.ToListAsync(cancellationToken);
+
+        return results.Select(r => (r.File, (AudioTranscription?)r.Transcription)).ToList();
+    }
 }

@@ -86,3 +86,28 @@ export async function getAudioResult(audioFileId: string): Promise<AudioResult> 
 
   return (await response.json()) as AudioResult
 }
+
+export async function getAudioFiles(): Promise<AudioResult[]> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/audio`)
+  } catch {
+    throw new ApiError(
+      'Network error: could not reach the API server. Check your connection and try again.',
+    )
+  }
+
+  if (!response.ok) {
+    const payload = await readErrorPayload(response)
+    throw new ApiError(
+      getErrorMessage(
+        payload,
+        `Failed to load the recordings list with status ${response.status}.`,
+      ),
+      response.status,
+      payload,
+    )
+  }
+
+  return (await response.json()) as AudioResult[]
+}

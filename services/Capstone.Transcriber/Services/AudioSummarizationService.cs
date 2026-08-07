@@ -51,7 +51,7 @@ public class AudioSummarizationService
             _logger.LogDebug("Running inference for summary generation...");
 
             var prompt = $@"<|system|>
-You are a title generator. Given a conversation transcript, generate a short title (max 50 characters) that captures the main topic, like ChatGPT or Gemini conversation titles.
+summarize:
 
 <|user|>
 {text}

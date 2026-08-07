@@ -17,7 +17,11 @@ interface UploadSelection {
 
 const EMPTY_SELECTION: UploadSelection = { file: null, error: null }
 
-export function UploadForm() {
+interface UploadFormProps {
+  onUploadSuccess?: () => void
+}
+
+export function UploadForm({ onUploadSuccess }: UploadFormProps) {
   const [selection, setSelection] = useState<UploadSelection>(EMPTY_SELECTION)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<UploadResponse | null>(null)
@@ -47,6 +51,7 @@ export function UploadForm() {
     try {
       const uploadResult = await uploadAudio(selection.file)
       setResult(uploadResult)
+      onUploadSuccess?.()
     } catch (error) {
       setResult(null)
       setSubmitError(

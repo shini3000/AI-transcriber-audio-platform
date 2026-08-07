@@ -14,8 +14,43 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 .app-title {
   font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.app-nav {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.app-nav-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.app-nav-btn:hover {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.app-nav-btn.active {
+  color: var(--color-accent);
+  background-color: rgba(37, 99, 235, 0.08);
   font-weight: 600;
 }
 
@@ -33,4 +68,9 @@
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: var(--space-6);
+}
+
+.history-section {
+  max-width: 800px;
+  margin: 0 auto;
 }
