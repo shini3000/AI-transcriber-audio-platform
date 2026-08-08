@@ -57,6 +57,7 @@ builder.Services.AddSingleton<IAudioEventPublisher, RabbitMQEventPublisher>();
 builder.Services.AddHostedService<AudioProcessedEventConsumer>();
 builder.Services.AddScoped<UploadAudioUseCase>();
 builder.Services.AddScoped<GetAudioResultUseCase>();
+builder.Services.AddScoped<GetAudioFilesListUseCase>();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {

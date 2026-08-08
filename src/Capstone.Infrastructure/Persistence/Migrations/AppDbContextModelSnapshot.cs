@@ -93,8 +93,7 @@ namespace Capstone.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("SummaryText")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TranscriptionId")
                         .HasColumnType("uuid");

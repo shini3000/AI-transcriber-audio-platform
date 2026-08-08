@@ -21,11 +21,16 @@ public class AudioController : ControllerBase
 
     private readonly UploadAudioUseCase _useCase;
     private readonly GetAudioResultUseCase _getResultUseCase;
+    private readonly GetAudioFilesListUseCase _getListUseCase;
 
-    public AudioController(UploadAudioUseCase useCase, GetAudioResultUseCase getResultUseCase)
+    public AudioController(
+        UploadAudioUseCase useCase,
+        GetAudioResultUseCase getResultUseCase,
+        GetAudioFilesListUseCase getListUseCase)
     {
         _useCase = useCase;
         _getResultUseCase = getResultUseCase;
+        _getListUseCase = getListUseCase;
     }
 
     [HttpPost("upload")]
@@ -78,6 +83,14 @@ public class AudioController : ControllerBase
         if (response is null)
             return NotFound();
 
+        return Ok(response);
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(List<AudioResultResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetList(CancellationToken cancellationToken)
+    {
+        var response = await _getListUseCase.ExecuteAsync(cancellationToken);
         return Ok(response);
     }
 }

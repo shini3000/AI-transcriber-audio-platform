@@ -69,6 +69,7 @@ public class AudioProcessorService
             {
                 _dbContext.AudioTranscriptions.Add(transcription);
                 await _dbContext.SaveChangesAsync();
+                _dbContext.ChangeTracker.Clear();
             }
             finally
             {
@@ -78,54 +79,60 @@ public class AudioProcessorService
             _logger.LogInformation("[STEP 3/5] Transcription saved (Id={Id}, took {Ms}ms)",
                 transcription.Id, dbSw.ElapsedMilliseconds);
 
-            var smSw = Stopwatch.StartNew();
-            _logger.LogInformation("[STEP 4/5] Generating summary with LLamaSharp (Qwen)...");
-            var summaryText = await _summarizationService.GenerateSummaryAsync(fullText);
-            smSw.Stop();
-            _logger.LogInformation("[STEP 4/5] Summary generated: '{Summary}' (took {Ms}ms)",
-                summaryText, smSw.ElapsedMilliseconds);
+            _logger.LogInformation("Spawning background TPL task for summary generation: AudioFileId={AudioFileId}", message.AudioFileId);
 
-            _logger.LogInformation("[STEP 5/5] Saving summary to database...");
-            var summary = new Domain.Entities.AudioSummary
+            _ = Task.Run(async () =>
             {
-                Id = Guid.NewGuid(),
-                AudioFileId = message.AudioFileId,
-                TranscriptionId = transcription.Id,
-                SummaryText = summaryText,
-                ModelName = "qwen2.5-0.5b-q8_0",
-                CreatedAt = DateTime.UtcNow
-            };
+                try
+                {
+                    var smSw = Stopwatch.StartNew();
+                    _logger.LogInformation("[BACKGROUND STEP 4/5] Generating summary with LLamaSharp (Qwen) for AudioFileId={AudioFileId}...", message.AudioFileId);
+                    var summaryText = await _summarizationService.GenerateSummaryAsync(fullText);
+                    smSw.Stop();
+                    _logger.LogInformation("[BACKGROUND STEP 4/5] Summary generated for AudioFileId={AudioFileId}: '{Summary}' (took {Ms}ms)",
+                        message.AudioFileId, summaryText, smSw.ElapsedMilliseconds);
 
-            if (!await _dbGate.WaitAsync(TimeSpan.FromSeconds(30)))
-                throw new TimeoutException("Timed out waiting for the shared DbContext gate (summary save)");
-            try
-            {
-                _dbContext.AudioSummaries.Add(summary);
-                await _dbContext.SaveChangesAsync();
-            }
-            finally
-            {
-                _dbGate.Release();
-            }
+                    _logger.LogInformation("[BACKGROUND STEP 5/5] Saving summary to database for AudioFileId={AudioFileId}...", message.AudioFileId);
+                    var summary = new Domain.Entities.AudioSummary
+                    {
+                        Id = Guid.NewGuid(),
+                        AudioFileId = message.AudioFileId,
+                        TranscriptionId = transcription.Id,
+                        SummaryText = summaryText,
+                        ModelName = "qwen2.5-0.5b-q8_0",
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-            if (!await _dbGate.WaitAsync(TimeSpan.FromSeconds(30)))
-                throw new TimeoutException("Timed out waiting for the shared DbContext gate (change tracker clear)");
-            try
-            {
-                _dbContext.ChangeTracker.Clear();
-            }
-            finally
-            {
-                _dbGate.Release();
-            }
+                    if (!await _dbGate.WaitAsync(TimeSpan.FromSeconds(30)))
+                        throw new TimeoutException("Timed out waiting for the shared DbContext gate (summary save)");
+                    try
+                    {
+                        _dbContext.AudioSummaries.Add(summary);
+                        await _dbContext.SaveChangesAsync();
+                        _dbContext.ChangeTracker.Clear();
+                    }
+                    finally
+                    {
+                        _dbGate.Release();
+                    }
 
-            totalSw.Stop();
+                    totalSw.Stop();
+                    _logger.LogInformation(
+                        "===== PROCESSING COMPLETE (including summary): AudioFileId={AudioFileId}, FileName={FileName}, Total={TotalMs}ms " +
+                        "(Download={DlMs}ms, Transcribe={TxMs}ms, Summary={SmMs}ms) =====",
+                        message.AudioFileId, message.FileName,
+                        totalSw.ElapsedMilliseconds, dlSw.ElapsedMilliseconds,
+                        txSw.ElapsedMilliseconds, smSw.ElapsedMilliseconds);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in background summary task for AudioFileId={AudioFileId}", message.AudioFileId);
+                }
+            });
+
             _logger.LogInformation(
-                "===== PROCESSING COMPLETE: AudioFileId={AudioFileId}, FileName={FileName}, Total={TotalMs}ms " +
-                "(Download={DlMs}ms, Transcribe={TxMs}ms, Summary={SmMs}ms) =====",
-                message.AudioFileId, message.FileName,
-                totalSw.ElapsedMilliseconds, dlSw.ElapsedMilliseconds,
-                txSw.ElapsedMilliseconds, smSw.ElapsedMilliseconds);
+                "----- TRANSCRIPTION COMPLETED & DELEGATED: AudioFileId={AudioFileId}, FileName={FileName}, sychronous processing took {Ms}ms -----",
+                message.AudioFileId, message.FileName, totalSw.ElapsedMilliseconds);
         }
         finally
         {
