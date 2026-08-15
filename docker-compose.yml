@@ -31,11 +31,11 @@ services:
       rabbitmq:
         condition: service_started
 
-  worker:
+  compressor:
     build:
       context: .
-      dockerfile: Dockerfile.worker
-    container_name: capstone-worker
+      dockerfile: Dockerfile.compressor
+    container_name: capstone-compressor
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -51,6 +51,40 @@ services:
       RabbitMQ__Password: guest
       RabbitMQ__ExchangeName: capstone.audio
       RabbitMQ__RoutingKey: audio.uploaded
+      RabbitMQ__CompressedRoutingKey: audio.compressed
+      MinIO__Endpoint: minio:9000
+      MinIO__AccessKey: minioadmin
+      MinIO__SecretKey: minioadmin
+      MinIO__BucketName: audio
+      MinIO__UseSsl: "false"
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=capstone_audio;Username=postgres;Password=postgres
+      FFmpeg__FfmpegPath: ffmpeg
+      Compressor__MaxConcurrency: "4"
+      Compressor__ShutdownTimeoutSeconds: "15"
+      Compressor__PollIntervalMs: "500"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: capstone-worker
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_started
+      compressor:
+        condition: service_started
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__ExchangeName: capstone.audio
+      RabbitMQ__RoutingKey: audio.compressed
       RabbitMQ__ProcessedRoutingKey: audio.processed
       MinIO__Endpoint: minio:9000
       MinIO__AccessKey: minioadmin
