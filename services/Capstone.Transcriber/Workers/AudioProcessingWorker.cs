@@ -1,7 +1,8 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
-using RabbitMQ.Client;
 using Capstone.Transcriber.Messaging;
 using Capstone.Transcriber.Services;
+using RabbitMQ.Client;
 
 namespace Capstone.Transcriber.Workers;
 
@@ -21,16 +22,19 @@ public class AudioProcessingWorker : BackgroundService
     private bool _stopRequested;
     private IConnection? _connection;
     private IServiceScope? _serviceScope;
-    private Task[] _workers = [];
 
-    public AudioProcessingWorker(ILogger<AudioProcessingWorker> logger, IConfiguration configuration, IServiceScopeFactory scopeFactory, AudioProcessedPublisher processedPublisher)
+    public AudioProcessingWorker(
+        ILogger<AudioProcessingWorker> logger,
+        IConfiguration configuration,
+        IServiceScopeFactory scopeFactory,
+        AudioProcessedPublisher processedPublisher)
     {
         _logger = logger;
         _configuration = configuration;
         _scopeFactory = scopeFactory;
         _processedPublisher = processedPublisher;
         _exchangeName = configuration["RabbitMQ:ExchangeName"] ?? "capstone.audio";
-        _routingKey = configuration["RabbitMQ:RoutingKey"] ?? "audio.uploaded";
+        _routingKey = configuration["RabbitMQ:RoutingKey"] ?? "audio.compressed";
         _processedRoutingKey = configuration["RabbitMQ:ProcessedRoutingKey"] ?? "audio.processed";
     }
 
@@ -43,7 +47,6 @@ public class AudioProcessingWorker : BackgroundService
 
     private bool StopRequested { get { lock (_stopLock) { return _stopRequested; } } set { lock (_stopLock) { _stopRequested = value; } } }
     private IConnection? Connection { get { lock (_stopLock) { return _connection; } } set { lock (_stopLock) { _connection = value; } } }
-    private Task[] Workers { get { lock (_stopLock) { return _workers; } } set { lock (_stopLock) { _workers = value; } } }
 
     private ConnectionFactory CreateConnectionFactory() => new()
     {
@@ -57,11 +60,11 @@ public class AudioProcessingWorker : BackgroundService
     {
         try
         {
-            var connection = await CreateConnectionFactory().CreateConnectionAsync();
+            var connection = await CreateConnectionFactory().CreateConnectionAsync(stoppingToken);
             Connection = connection;
 
-            await using (var setupChannel = await connection.CreateChannelAsync())
-                await DeclareTopologyAsync(setupChannel);
+            await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
+            await DeclareTopologyAsync(channel);
 
             var scope = _scopeFactory.CreateScope();
             _serviceScope = scope;
@@ -69,24 +72,32 @@ public class AudioProcessingWorker : BackgroundService
 
             var concurrency = ResolveConsumerCount(_configuration);
             var pollIntervalMs = Math.Max(1, _configuration.GetValue<int?>("Transcriber:PollIntervalMs") ?? 500);
-            var workers = new Task[concurrency];
-            for (var i = 0; i < concurrency; i++)
+
+            _logger.LogInformation(
+                "AudioProcessingWorker started with Parallel.ForEachAsync pool: exchange='{Exchange}', queue='{Queue}', concurrency={Concurrency}",
+                _exchangeName, QueueName, concurrency);
+
+            var parallelOptions = new ParallelOptions
             {
-                var workerIndex = i;
-                var channel = await connection.CreateChannelAsync();
-                workers[i] = Task.Run(() => WorkerLoopAsync(workerIndex, channel, processor, pollIntervalMs));
-            }
-            Workers = workers;
+                MaxDegreeOfParallelism = concurrency,
+                CancellationToken = stoppingToken
+            };
 
-            _logger.LogInformation("AudioProcessingWorker started: exchange='{Exchange}', queue='{Queue}', workers={Concurrency} (poll interval={PollIntervalMs}ms)",
-                _exchangeName, QueueName, concurrency, pollIntervalMs);
-
-            while (!StopRequested)
-                await Task.Delay(500);
+            await Parallel.ForEachAsync(
+                GetMessageStreamAsync(channel, QueueName, pollIntervalMs, stoppingToken),
+                parallelOptions,
+                async (result, ct) =>
+                {
+                    await ProcessMessageAsync(channel, processor, result, ct);
+                });
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("AudioProcessingWorker stopping cancellation received");
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "AudioProcessingWorker failed to start workers");
+            _logger.LogCritical(ex, "AudioProcessingWorker encountered a fatal error");
             StopRequested = true;
             await CloseConnectionAsync();
             DisposeScope();
@@ -99,82 +110,49 @@ public class AudioProcessingWorker : BackgroundService
         _logger.LogInformation("AudioProcessingWorker stopping...");
         StopRequested = true;
         await CloseConnectionAsync();
-
-        var workers = Workers;
-        if (workers.Length > 0)
-        {
-            var timeoutSeconds = Math.Max(0, _configuration.GetValue<int?>("Transcriber:ShutdownTimeoutSeconds") ?? 15);
-            var workersTask = Task.WhenAll(workers);
-            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
-            if (await Task.WhenAny(workersTask, timeoutTask) == workersTask)
-                _logger.LogInformation("All worker tasks drained and exited");
-            else
-                _logger.LogWarning("Shutdown drain timeout ({TimeoutSeconds}s) reached with workers still processing; unacked messages will be requeued by the broker", timeoutSeconds);
-        }
-
         DisposeScope();
         await base.StopAsync(cancellationToken);
     }
 
-    private async Task WorkerLoopAsync(int workerIndex, IChannel channel, AudioProcessorService processor, int pollIntervalMs)
+    private async IAsyncEnumerable<BasicGetResult> GetMessageStreamAsync(
+        IChannel channel,
+        string queueName,
+        int pollIntervalMs,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        while (!StopRequested)
+        while (!cancellationToken.IsCancellationRequested && !StopRequested)
         {
+            BasicGetResult? result;
             try
             {
-                while (!StopRequested)
-                    await PollAndProcessAsync(workerIndex, channel, processor, pollIntervalMs);
+                result = await channel.BasicGetAsync(queueName, autoAck: false, cancellationToken: cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                yield break;
             }
             catch (Exception ex)
             {
-                if (StopRequested)
-                {
-                    _logger.LogDebug(ex, "Worker {Worker} exiting: shutdown requested", workerIndex);
-                    return;
-                }
-                _logger.LogError(ex, "Worker {Worker} channel error; discarding it and retrying", workerIndex);
-            }
-            finally
-            {
-                try { await channel.DisposeAsync(); }
-                catch (Exception ex) { _logger.LogDebug(ex, "Worker {Worker} channel dispose failed", workerIndex); }
-            }
-
-            if (StopRequested)
-                return;
-
-            await Task.Delay(pollIntervalMs);
-            while (!StopRequested)
-            {
-                try
-                {
-                    channel = await CreateWorkerChannelAsync(workerIndex);
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Worker {Worker} could not recreate its channel; retrying in {DelayMs}ms", workerIndex, pollIntervalMs);
-                    await Task.Delay(pollIntervalMs);
-                }
-            }
-        }
-    }
-
-    private async Task PollAndProcessAsync(int workerIndex, IChannel channel, AudioProcessorService processor, int pollIntervalMs)
-    {
-        while (!StopRequested)
-        {
-            var result = await channel.BasicGetAsync(QueueName, autoAck: false);
-            if (result is null)
-            {
-                await Task.Delay(pollIntervalMs);
+                _logger.LogError(ex, "Error polling message from RabbitMQ in Transcriber; retrying in {DelayMs}ms", pollIntervalMs);
+                await Task.Delay(pollIntervalMs, cancellationToken);
                 continue;
             }
-            await ProcessMessageAsync(workerIndex, channel, processor, result);
+
+            if (result is null)
+            {
+                await Task.Delay(pollIntervalMs, cancellationToken);
+                continue;
+            }
+
+            yield return result;
         }
     }
 
-    private async Task ProcessMessageAsync(int workerIndex, IChannel channel, AudioProcessorService processor, BasicGetResult result)
+    private async Task ProcessMessageAsync(
+        IChannel channel,
+        AudioProcessorService processor,
+        BasicGetResult result,
+        CancellationToken cancellationToken)
     {
         var deliveryTag = result.DeliveryTag;
         AudioUploadedMessage? message;
@@ -184,19 +162,20 @@ public class AudioProcessingWorker : BackgroundService
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Worker {Worker} received a malformed message (delivery tag {DeliveryTag}); discarding without requeue", workerIndex, deliveryTag);
-            await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false);
+            _logger.LogError(ex, "Transcriber received a malformed message; discarding without requeue");
+            await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false, cancellationToken: cancellationToken);
             return;
         }
 
         if (message is null)
         {
-            _logger.LogWarning("Worker {Worker} received a null message (delivery tag {DeliveryTag}); discarding without requeue", workerIndex, deliveryTag);
-            await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false);
+            _logger.LogWarning("Transcriber received a null message; discarding without requeue");
+            await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false, cancellationToken: cancellationToken);
             return;
         }
 
-        _logger.LogInformation("Worker {Worker} received event: AudioFileId={AudioFileId}, FileName={FileName}", workerIndex, message.AudioFileId, message.FileName);
+        _logger.LogInformation("Transcriber processing AudioFileId={AudioFileId}, FileName={FileName}",
+            message.AudioFileId, message.FileName);
 
         try
         {
@@ -208,22 +187,22 @@ public class AudioProcessingWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Worker {Worker} could not publish processed event for AudioFileId={AudioFileId}; continuing with ack", workerIndex, message.AudioFileId);
+                _logger.LogWarning(ex, "Transcriber could not publish processed event for AudioFileId={AudioFileId}; continuing with ack", message.AudioFileId);
             }
 
-            await channel.BasicAckAsync(deliveryTag, multiple: false);
-            _logger.LogInformation("Worker {Worker} successfully processed AudioFileId={AudioFileId}", workerIndex, message.AudioFileId);
+            await channel.BasicAckAsync(deliveryTag, multiple: false, cancellationToken: cancellationToken);
+            _logger.LogInformation("Transcriber successfully processed and acked AudioFileId={AudioFileId}", message.AudioFileId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Worker {Worker} failed to process AudioFileId={AudioFileId}; discarding without requeue", workerIndex, message.AudioFileId);
+            _logger.LogError(ex, "Transcriber failed to process AudioFileId={AudioFileId}; discarding without requeue", message.AudioFileId);
             try
             {
-                await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false);
+                await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false, cancellationToken: cancellationToken);
             }
             catch (Exception nackEx)
             {
-                _logger.LogWarning(nackEx, "Worker {Worker} could not nack delivery tag {DeliveryTag}; the broker will requeue it when the channel closes", workerIndex, deliveryTag);
+                _logger.LogWarning(nackEx, "Transcriber could not nack delivery tag");
             }
         }
     }
@@ -233,18 +212,8 @@ public class AudioProcessingWorker : BackgroundService
         await channel.ExchangeDeclareAsync(_exchangeName, ExchangeType.Topic, durable: true, autoDelete: false);
         var queueDeclareOk = await channel.QueueDeclareAsync(QueueName, durable: true, exclusive: false, autoDelete: false);
         await channel.QueueBindAsync(queueDeclareOk.QueueName, _exchangeName, _routingKey);
-        _logger.LogInformation("Worker declared exchange '{Exchange}' and queue '{Queue}' bound with routing key '{RoutingKey}'", _exchangeName, queueDeclareOk.QueueName, _routingKey);
-    }
-
-    private async Task<IChannel> CreateWorkerChannelAsync(int workerIndex)
-    {
-        var connection = Connection;
-        if (connection is null)
-            throw new InvalidOperationException("Worker connection is not available");
-
-        var channel = await connection.CreateChannelAsync();
-        _logger.LogDebug("Worker {Worker} opened its private channel", workerIndex);
-        return channel;
+        _logger.LogInformation("Transcriber declared exchange '{Exchange}' and queue '{Queue}' bound with routing key '{RoutingKey}'",
+            _exchangeName, queueDeclareOk.QueueName, _routingKey);
     }
 
     private async Task CloseConnectionAsync()
@@ -255,8 +224,7 @@ public class AudioProcessingWorker : BackgroundService
             connection = _connection;
             _connection = null;
         }
-        if (connection is null)
-            return;
+        if (connection is null) return;
 
         try
         {
@@ -265,7 +233,7 @@ public class AudioProcessingWorker : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Connection close during shutdown failed (likely already closed)");
+            _logger.LogDebug(ex, "Connection close during shutdown failed");
         }
     }
 
@@ -277,8 +245,7 @@ public class AudioProcessingWorker : BackgroundService
             scope = _serviceScope;
             _serviceScope = null;
         }
-        if (scope is null)
-            return;
+        if (scope is null) return;
 
         try
         {

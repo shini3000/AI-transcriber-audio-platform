@@ -19,6 +19,12 @@ public class AudioFileRepository : IAudioFileRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task AddRangeAsync(IEnumerable<AudioFile> audioFiles, CancellationToken cancellationToken = default)
+    {
+        await _context.AudioFiles.AddRangeAsync(audioFiles, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<AudioFile?> GetByIdAsync(Guid id)
     {
         return await _context.AudioFiles
@@ -37,6 +43,12 @@ public class AudioFileRepository : IAudioFileRepository
         await _context.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task UpdateAsync(AudioFile audioFile, CancellationToken cancellationToken = default)
+    {
+        _context.AudioFiles.Update(audioFile);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<List<(AudioFile File, AudioTranscription? Transcription)>> GetAllWithTranscriptionAsync(CancellationToken cancellationToken = default)
