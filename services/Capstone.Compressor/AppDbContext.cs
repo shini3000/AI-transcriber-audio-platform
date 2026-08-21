@@ -26,6 +26,9 @@ public class AppDbContext : DbContext
             entity.Property(e => e.OriginalFileName).IsRequired().HasMaxLength(255);
             entity.Property(e => e.OriginalContentType).IsRequired().HasMaxLength(100);
             entity.Property(e => e.OriginalSize).IsRequired();
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("uploaded");
+            entity.Property(e => e.ValidationErrorMessage).HasMaxLength(500);
+            entity.Property(e => e.ValidatedAt);
         });
     }
 }

@@ -31,6 +31,14 @@ public class AudioCompressionProcessor
         _logger.LogInformation("===== COMPRESSION START: AudioFileId={AudioFileId}, FileName={FileName}, StorageUrl={StorageUrl} =====",
             message.AudioFileId, message.FileName, message.StorageUrl);
 
+        var audioFile = await _dbContext.AudioFiles.FirstOrDefaultAsync(f => f.Id == message.AudioFileId, cancellationToken);
+        if (audioFile == null || audioFile.Status == "rejected")
+        {
+            _logger.LogWarning("Skipping compression for AudioFileId={AudioFileId}: file is rejected or not found (Status={Status})",
+                message.AudioFileId, audioFile?.Status);
+            return string.Empty;
+        }
+
         var tempRawFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}_{message.FileName}");
         string? tempCompressedFile = null;
 
@@ -52,7 +60,6 @@ public class AudioCompressionProcessor
                 "audio/aac",
                 cancellationToken);
 
-            var audioFile = await _dbContext.AudioFiles.FirstOrDefaultAsync(f => f.Id == message.AudioFileId, cancellationToken);
             if (audioFile != null)
             {
                 audioFile.FileName = compressedFileName;

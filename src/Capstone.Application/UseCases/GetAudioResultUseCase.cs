@@ -22,6 +22,17 @@ public class GetAudioResultUseCase
         if (audioFile is null)
             return null;
 
+        if (audioFile.Status == "rejected")
+        {
+            return new AudioResultResponse(
+                "rejected",
+                audioFile.Id,
+                audioFile.FileName,
+                null,
+                null)
+            { ValidationErrorMessage = audioFile.ValidationErrorMessage };
+        }
+
         var transcription = await _transcriptionRepository.GetByAudioFileIdAsync(audioFileId);
         if (transcription is null)
         {

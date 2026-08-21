@@ -211,6 +211,18 @@ public class AudioProcessingWorker : BackgroundService
     {
         await channel.ExchangeDeclareAsync(_exchangeName, ExchangeType.Topic, durable: true, autoDelete: false);
         var queueDeclareOk = await channel.QueueDeclareAsync(QueueName, durable: true, exclusive: false, autoDelete: false);
+
+        try
+        {
+            await channel.QueueUnbindAsync(queueDeclareOk.QueueName, _exchangeName, "audio.uploaded");
+            await channel.QueueUnbindAsync(queueDeclareOk.QueueName, _exchangeName, "audio.validated");
+            _logger.LogInformation("Unbound any legacy routing keys from queue '{Queue}'", queueDeclareOk.QueueName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "QueueUnbind for legacy routing keys ignored");
+        }
+
         await channel.QueueBindAsync(queueDeclareOk.QueueName, _exchangeName, _routingKey);
         _logger.LogInformation("Transcriber declared exchange '{Exchange}' and queue '{Queue}' bound with routing key '{RoutingKey}'",
             _exchangeName, queueDeclareOk.QueueName, _routingKey);

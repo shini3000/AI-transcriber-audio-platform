@@ -8,6 +8,9 @@ public class AudioFile
     public long Size { get; set; }
     public string StorageUrl { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
+    public string Status { get; set; } = "uploaded";
+    public string? ValidationErrorMessage { get; set; }
+    public DateTime? ValidatedAt { get; set; }
     public string OriginalFileName { get; set; } = string.Empty;
     public string OriginalContentType { get; set; } = string.Empty;
     public long OriginalSize { get; set; }

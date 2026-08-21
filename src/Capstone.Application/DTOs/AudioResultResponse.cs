@@ -5,5 +5,8 @@ public record AudioResultResponse(
     Guid AudioFileId,
     string? FileName,
     TranscriptionDto? Transcription,
-    SummaryDto? Summary
-);
+    SummaryDto? Summary)
+{
+    public string? ValidationErrorMessage { get; init; }
+}
+

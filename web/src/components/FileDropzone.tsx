@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
-import { MAX_FILE_SIZE_BYTES, validateAudioFile } from '../types/upload'
+import { MAX_FILE_SIZE_BYTES } from '../types/upload'
 import { formatBytes } from '../lib/formatBytes'
 import './FileDropzone.css'
 
@@ -21,12 +21,7 @@ export function FileDropzone({
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFile = (candidate: File | null) => {
-    if (candidate === null) {
-      onSelect(null, null)
-      return
-    }
-    const result = validateAudioFile(candidate)
-    onSelect(result.ok ? candidate : null, result.ok ? null : result.error)
+    onSelect(candidate, null)
   }
 
   const openFileDialog = () => {
@@ -94,7 +89,6 @@ export function FileDropzone({
         <input
           ref={inputRef}
           type="file"
-          accept="audio/*"
           onChange={handleInputChange}
           hidden
         />

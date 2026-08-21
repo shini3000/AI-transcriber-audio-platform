@@ -62,6 +62,13 @@ namespace Capstone.Infrastructure.Persistence.Migrations
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("uploaded");
+
                     b.Property<string>("StorageUrl")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -69,6 +76,13 @@ namespace Capstone.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ValidatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ValidationErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 
