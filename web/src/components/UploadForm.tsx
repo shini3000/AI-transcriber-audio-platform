@@ -52,9 +52,7 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
               disabled={isProcessing || stagedFiles.length === 0}
             >
               <Upload size={18} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }} />
-              {stagedFiles.length === 0
-                ? 'Select audio files'
-                : `Upload ${stagedFiles.length} audio${stagedFiles.length > 1 ? 's' : ''} in parallel`}
+              Upload
             </button>
           </div>
         </form>

@@ -3,14 +3,31 @@ html {
 }
 
 :root {
-  --color-bg: #f5f6f8;
+  /* Indigo Ink Palette */
+  --indigo-ink-50: #efe9fc;
+  --indigo-ink-100: #ded2f9;
+  --indigo-ink-200: #bea5f3;
+  --indigo-ink-300: #9d78ed;
+  --indigo-ink-400: #7d4be7;
+  --indigo-ink-500: #5c1fe0;
+  --indigo-ink-600: #4a18b4;
+  --indigo-ink-700: #371287;
+  --indigo-ink-800: #250c5a;
+  --indigo-ink-900: #12062d;
+  --indigo-ink-950: #0d041f;
+
+  /* Light Theme (High Contrast - #5c1fe0 / indigo-ink-500) */
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-text: #1a1d21;
-  --color-text-muted: #6b7280;
-  --color-accent: #2563eb;
-  --color-border: #d1d5db;
-  --color-error: #dc2626;
-  --color-success: #16a34a;
+  --color-surface-elevated: #efe9fc;
+  --color-text: #12062d;
+  --color-text-muted: #4a18b4;
+  --color-accent: #5c1fe0;
+  --color-accent-hover: #371287;
+  --color-border: #9d78ed;
+  --color-border-subtle: #bea5f3;
+  --color-error: #e11d48;
+  --color-success: #059669;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -27,12 +44,16 @@ html {
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg: #111418;
-  --color-surface: #1a1f26;
-  --color-text: #e5e7eb;
-  --color-text-muted: #9ca3af;
-  --color-accent: #60a5fa;
-  --color-border: #2d333b;
-  --color-error: #f87171;
-  --color-success: #4ade80;
+  /* Dark Theme (#12062d / indigo-ink-900 background) */
+  --color-bg: #12062d;
+  --color-surface: #1e0b47;
+  --color-surface-elevated: #250c5a;
+  --color-text: #efe9fc;
+  --color-text-muted: #bea5f3;
+  --color-accent: #9d78ed;
+  --color-accent-hover: #bea5f3;
+  --color-border: #371287;
+  --color-border-subtle: #250c5a;
+  --color-error: #fb7185;
+  --color-success: #34d399;
 }
