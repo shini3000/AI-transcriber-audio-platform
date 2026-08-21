@@ -60,17 +60,20 @@
 }
 
 .upload-section {
-  max-width: 640px;
+  max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .upload-section-title {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: var(--space-6);
+  text-align: center;
 }
 
 .history-section {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }

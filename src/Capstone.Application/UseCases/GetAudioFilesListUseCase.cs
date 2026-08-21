@@ -20,6 +20,9 @@ public class GetAudioFilesListUseCase
 
         foreach (var (audioFile, transcription) in records)
         {
+            if (audioFile.Status == "rejected")
+                continue;
+
             if (transcription is null)
             {
                 responses.Add(new AudioResultResponse(

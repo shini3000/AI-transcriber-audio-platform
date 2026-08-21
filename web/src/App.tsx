@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ThemeProvider } from './context/ThemeProvider'
 import { ThemeToggle } from './components/ThemeToggle'
 import { UploadForm } from './components/UploadForm'
@@ -11,9 +11,9 @@ function App() {
   const [view, setView] = useState<ViewType>('upload')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1)
-  }
+  }, [])
 
   return (
     <ThemeProvider>

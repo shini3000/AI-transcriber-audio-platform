@@ -59,23 +59,38 @@ public class AudioValidationWorker : BackgroundService
             await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
             await DeclareTopologyAsync(channel);
 
-            var maxConcurrency = Math.Max(1, _configuration.GetValue<int?>("Validator:MaxConcurrency") ?? 4);
             var pollIntervalMs = Math.Max(1, _configuration.GetValue<int?>("Validator:PollIntervalMs") ?? 500);
 
             _logger.LogInformation(
-                "AudioValidationWorker started: exchange='{Exchange}', queue='{Queue}', concurrency={Concurrency}",
-                _exchangeName, QueueName, maxConcurrency);
+                "AudioValidationWorker started: exchange='{Exchange}', queue='{Queue}'",
+                _exchangeName, QueueName);
 
-            var parallelOptions = new ParallelOptions
+            while (!stoppingToken.IsCancellationRequested && !StopRequested)
             {
-                MaxDegreeOfParallelism = maxConcurrency,
-                CancellationToken = stoppingToken
-            };
+                BasicGetResult? result;
+                try
+                {
+                    result = await channel.BasicGetAsync(QueueName, autoAck: false, cancellationToken: stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error polling from RabbitMQ; retrying in {DelayMs}ms", pollIntervalMs);
+                    await Task.Delay(pollIntervalMs, stoppingToken);
+                    continue;
+                }
 
-            await Parallel.ForEachAsync(
-                GetMessageStreamAsync(channel, QueueName, pollIntervalMs, stoppingToken),
-                parallelOptions,
-                async (result, ct) => await ProcessMessageAsync(channel, result, ct));
+                if (result is null)
+                {
+                    await Task.Delay(pollIntervalMs, stoppingToken);
+                    continue;
+                }
+
+                await ProcessMessageAsync(channel, result, stoppingToken);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -96,40 +111,6 @@ public class AudioValidationWorker : BackgroundService
         StopRequested = true;
         await CloseConnectionAsync();
         await base.StopAsync(cancellationToken);
-    }
-
-    private async IAsyncEnumerable<BasicGetResult> GetMessageStreamAsync(
-        IChannel channel,
-        string queueName,
-        int pollIntervalMs,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested && !StopRequested)
-        {
-            BasicGetResult? result;
-            try
-            {
-                result = await channel.BasicGetAsync(queueName, autoAck: false, cancellationToken: cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                yield break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error polling from RabbitMQ; retrying in {DelayMs}ms", pollIntervalMs);
-                await Task.Delay(pollIntervalMs, cancellationToken);
-                continue;
-            }
-
-            if (result is null)
-            {
-                await Task.Delay(pollIntervalMs, cancellationToken);
-                continue;
-            }
-
-            yield return result;
-        }
     }
 
     private async Task ProcessMessageAsync(

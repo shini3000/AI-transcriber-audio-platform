@@ -54,6 +54,7 @@ public class AudioFileRepository : IAudioFileRepository
     public async Task<List<(AudioFile File, AudioTranscription? Transcription)>> GetAllWithTranscriptionAsync(CancellationToken cancellationToken = default)
     {
         var query = from file in _context.AudioFiles
+                    where file.Status != "rejected"
                     join tx in _context.AudioTranscriptions.Include(t => t.Summary)
                         on file.Id equals tx.AudioFileId into txGroup
                     from subTx in txGroup.DefaultIfEmpty()
