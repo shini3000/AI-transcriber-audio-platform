@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   ProcessingAudioItem,
-  WorkerInMessage,
-  WorkerOutMessage,
 } from '../types/parallelUpload'
-
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5069' : '')
-const API_BASE_URL = rawBaseUrl.replace(/\/api\/?$/, '').replace(/\/$/, '')
+import { uploadAudio, getAudioResult } from '../services/api'
 
 interface UseParallelAudioUploadProps {
   onItemCompleted?: () => void
@@ -16,54 +12,20 @@ export function useParallelAudioUpload({
   onItemCompleted,
 }: UseParallelAudioUploadProps = {}) {
   const [items, setItems] = useState<ProcessingAudioItem[]>([])
-  const workerRef = useRef<Worker | null>(null)
+  const isCancelledRef = useRef(false)
 
   const onItemCompletedRef = useRef(onItemCompleted)
   useEffect(() => {
     onItemCompletedRef.current = onItemCompleted
   }, [onItemCompleted])
 
-  useEffect(() => {
-    const worker = new Worker(
-      new URL('../workers/audioUpload.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
-    workerRef.current = worker
-
-    worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
-      const msg = event.data
-      if (msg.type === 'STATUS_UPDATE') {
-        setItems((prev) =>
-          prev.map((item) => {
-            if (item.clientId !== msg.clientId) return item
-            return {
-              ...item,
-              status: msg.status,
-              uploadResponse: msg.uploadResponse ?? item.uploadResponse,
-              audioResult: msg.audioResult ?? item.audioResult,
-              error: msg.error ?? (msg.status === 'ready' ? null : item.error),
-            }
-          }),
-        )
-
-        if (msg.status === 'ready' || msg.status === 'rejected') {
-          onItemCompletedRef.current?.()
-        }
-      }
-    }
-
-    return () => {
-      worker.terminate()
-      workerRef.current = null
-    }
-  }, [])
-
-  const startProcessing = useCallback((files: File[]) => {
-    if (!files.length || !workerRef.current) return
+  const startProcessing = useCallback(async (files: File[]) => {
+    if (!files.length) return
+    isCancelledRef.current = false
 
     const targetFiles = files.slice(0, 3)
 
-    const newItems: ProcessingAudioItem[] = targetFiles.map((file) => ({
+    const initialItems: ProcessingAudioItem[] = targetFiles.map((file) => ({
       clientId: crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -73,39 +35,120 @@ export function useParallelAudioUpload({
       status: 'idle',
     }))
 
-    setItems(newItems)
+    setItems(initialItems)
 
-    newItems.forEach((item) => {
-      const msg: WorkerInMessage = {
-        type: 'START_UPLOAD',
-        item: {
-          clientId: item.clientId,
-          file: item.file,
-          apiBaseUrl: API_BASE_URL,
-        },
+    for (let i = 0; i < initialItems.length; i++) {
+      if (isCancelledRef.current) break
+
+      const currentItem = initialItems[i]
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.clientId === currentItem.clientId
+            ? { ...item, status: 'uploading' }
+            : item,
+        ),
+      )
+
+      try {
+        const uploadResponse = await uploadAudio(currentItem.file)
+
+        if (isCancelledRef.current) break
+
+        setItems((prev) =>
+          prev.map((item) =>
+            item.clientId === currentItem.clientId
+              ? { ...item, status: 'processing', uploadResponse }
+              : item,
+          ),
+        )
+
+        const audioFileId = uploadResponse.id
+        const pollIntervalMs = 2000
+        const timeoutMs = 120000
+        const startTime = Date.now()
+
+        let finished = false
+        while (!finished && !isCancelledRef.current) {
+          if (Date.now() - startTime > timeoutMs) {
+            setItems((prev) =>
+              prev.map((item) =>
+                item.clientId === currentItem.clientId
+                  ? {
+                    ...item,
+                    status: 'failed',
+                    error: 'Processing timed out after 2 minutes.',
+                  }
+                  : item,
+              ),
+            )
+            break
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+          if (isCancelledRef.current) break
+
+          try {
+            const resultData = await getAudioResult(audioFileId)
+
+            if (resultData.status === 'ready') {
+              finished = true
+              setItems((prev) =>
+                prev.map((item) =>
+                  item.clientId === currentItem.clientId
+                    ? { ...item, status: 'ready', audioResult: resultData }
+                    : item,
+                ),
+              )
+              onItemCompletedRef.current?.()
+            } else if (resultData.status === 'rejected') {
+              finished = true
+              setItems((prev) =>
+                prev.map((item) =>
+                  item.clientId === currentItem.clientId
+                    ? {
+                      ...item,
+                      status: 'rejected',
+                      audioResult: resultData,
+                      error:
+                        resultData.validationErrorMessage ??
+                        'File was rejected: invalid audio format.',
+                    }
+                    : item,
+                ),
+              )
+              onItemCompletedRef.current?.()
+            }
+          } catch {
+          }
+        }
+      } catch (err) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.clientId === currentItem.clientId
+              ? {
+                ...item,
+                status: 'failed',
+                error:
+                  err instanceof Error
+                    ? err.message
+                    : 'Network error during upload.',
+              }
+              : item,
+          ),
+        )
       }
-      workerRef.current?.postMessage(msg)
-    })
+    }
   }, [])
 
   const removeItem = useCallback((clientId: string) => {
-    workerRef.current?.postMessage({
-      type: 'CANCEL_ITEM',
-      clientId,
-    } as WorkerInMessage)
-
     setItems((prev) => prev.filter((item) => item.clientId !== clientId))
   }, [])
 
   const resetAll = useCallback(() => {
-    items.forEach((item) => {
-      workerRef.current?.postMessage({
-        type: 'CANCEL_ITEM',
-        clientId: item.clientId,
-      } as WorkerInMessage)
-    })
+    isCancelledRef.current = true
     setItems([])
-  }, [items])
+  }, [])
 
   const isProcessing = items.some(
     (item) => item.status === 'uploading' || item.status === 'processing',

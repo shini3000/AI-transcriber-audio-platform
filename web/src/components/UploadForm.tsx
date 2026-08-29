@@ -65,7 +65,7 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
               </h3>
               <span className="upload-parallel-subtitle">
                 {isProcessing
-                  ? `Active parallel execution · ${completedCount}/${items.length} completed`
+                  ? `Processing sequentially (1 by 1) · ${completedCount}/${items.length} completed`
                   : `Batch finished · ${completedCount} items processed`}
               </span>
             </div>
@@ -74,7 +74,7 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
               {isProcessing && (
                 <div className="upload-parallel-spinner-tag">
                   <LoadingSpinner size="sm" />
-                  <span>Processing concurrently</span>
+                  <span>Sequential Processing</span>
                 </div>
               )}
               <button
