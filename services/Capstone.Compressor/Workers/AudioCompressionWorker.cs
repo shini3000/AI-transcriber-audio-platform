@@ -34,7 +34,7 @@ public class AudioCompressionWorker : BackgroundService
         _scopeFactory = scopeFactory;
         _publisher = publisher;
         _exchangeName = configuration["RabbitMQ:ExchangeName"] ?? "capstone.audio";
-        _routingKey = configuration["RabbitMQ:RoutingKey"] ?? "audio.uploaded";
+        _routingKey = configuration["RabbitMQ:RoutingKey"] ?? "audio.validated";
         _compressedRoutingKey = configuration["RabbitMQ:CompressedRoutingKey"] ?? "audio.compressed";
     }
 
@@ -70,26 +70,38 @@ public class AudioCompressionWorker : BackgroundService
             _serviceScope = scope;
             var processor = scope.ServiceProvider.GetRequiredService<AudioCompressionProcessor>();
 
-            var concurrency = ResolveConsumerCount(_configuration);
             var pollIntervalMs = Math.Max(1, _configuration.GetValue<int?>("Compressor:PollIntervalMs") ?? 500);
 
             _logger.LogInformation(
-                "AudioCompressionWorker started with Parallel.ForEachAsync pool: exchange='{Exchange}', queue='{Queue}', concurrency={Concurrency}",
-                _exchangeName, QueueName, concurrency);
+                "AudioCompressionWorker started: exchange='{Exchange}', queue='{Queue}'",
+                _exchangeName, QueueName);
 
-            var parallelOptions = new ParallelOptions
+            while (!stoppingToken.IsCancellationRequested && !StopRequested)
             {
-                MaxDegreeOfParallelism = concurrency,
-                CancellationToken = stoppingToken
-            };
-
-            await Parallel.ForEachAsync(
-                GetMessageStreamAsync(channel, QueueName, pollIntervalMs, stoppingToken),
-                parallelOptions,
-                async (result, ct) =>
+                BasicGetResult? result;
+                try
                 {
-                    await ProcessMessageAsync(channel, processor, result, ct);
-                });
+                    result = await channel.BasicGetAsync(QueueName, autoAck: false, cancellationToken: stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error polling message from RabbitMQ; retrying in {DelayMs}ms", pollIntervalMs);
+                    await Task.Delay(pollIntervalMs, stoppingToken);
+                    continue;
+                }
+
+                if (result is null)
+                {
+                    await Task.Delay(pollIntervalMs, stoppingToken);
+                    continue;
+                }
+
+                await ProcessMessageAsync(channel, processor, result, stoppingToken);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -112,40 +124,6 @@ public class AudioCompressionWorker : BackgroundService
         await CloseConnectionAsync();
         DisposeScope();
         await base.StopAsync(cancellationToken);
-    }
-
-    private async IAsyncEnumerable<BasicGetResult> GetMessageStreamAsync(
-        IChannel channel,
-        string queueName,
-        int pollIntervalMs,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested && !StopRequested)
-        {
-            BasicGetResult? result;
-            try
-            {
-                result = await channel.BasicGetAsync(queueName, autoAck: false, cancellationToken: cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                yield break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error polling message from RabbitMQ; retrying in {DelayMs}ms", pollIntervalMs);
-                await Task.Delay(pollIntervalMs, cancellationToken);
-                continue;
-            }
-
-            if (result is null)
-            {
-                await Task.Delay(pollIntervalMs, cancellationToken);
-                continue;
-            }
-
-            yield return result;
-        }
     }
 
     private async Task ProcessMessageAsync(
@@ -174,12 +152,19 @@ public class AudioCompressionWorker : BackgroundService
             return;
         }
 
-        _logger.LogInformation("Processing audio.uploaded message: AudioFileId={AudioFileId}, FileName={FileName}",
+        _logger.LogInformation("Processing audio message: AudioFileId={AudioFileId}, FileName={FileName}",
             message.AudioFileId, message.FileName);
 
         try
         {
             var compressedUrl = await processor.ProcessAsync(message, cancellationToken);
+            if (string.IsNullOrEmpty(compressedUrl))
+            {
+                _logger.LogInformation("Compression skipped for AudioFileId={AudioFileId}", message.AudioFileId);
+                await channel.BasicAckAsync(deliveryTag, multiple: false, cancellationToken: cancellationToken);
+                return;
+            }
+
             var compressedFileName = Path.ChangeExtension(message.FileName, ".aac");
 
             try
@@ -213,6 +198,17 @@ public class AudioCompressionWorker : BackgroundService
     {
         await channel.ExchangeDeclareAsync(_exchangeName, ExchangeType.Topic, durable: true, autoDelete: false);
         var queueDeclareOk = await channel.QueueDeclareAsync(QueueName, durable: true, exclusive: false, autoDelete: false);
+
+        try
+        {
+            await channel.QueueUnbindAsync(queueDeclareOk.QueueName, _exchangeName, "audio.uploaded");
+            _logger.LogInformation("Unbound legacy routing key 'audio.uploaded' from queue '{Queue}'", queueDeclareOk.QueueName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "QueueUnbind for legacy routing key ignored");
+        }
+
         await channel.QueueBindAsync(queueDeclareOk.QueueName, _exchangeName, _routingKey);
         _logger.LogInformation("Declared exchange '{Exchange}' and queue '{Queue}' bound with routing key '{RoutingKey}'",
             _exchangeName, queueDeclareOk.QueueName, _routingKey);

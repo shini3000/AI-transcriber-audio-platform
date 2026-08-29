@@ -1,12 +1,23 @@
+.upload-form-container {
+  width: 100%;
+}
+
 .upload-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.upload-form-actions {
+  display: flex;
+  justify-content: center;
 }
 
 .upload-form-submit {
-  align-self: flex-start;
-  padding: var(--space-2) var(--space-6);
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
   border: none;
   border-radius: var(--radius-md);
   background-color: var(--color-accent);
@@ -16,11 +27,13 @@
   cursor: pointer;
   transition:
     background-color 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.15s ease,
+    transform 0.1s ease;
 }
 
 .upload-form-submit:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--color-accent) 85%, #000000);
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .upload-form-submit:disabled {
@@ -28,19 +41,81 @@
   cursor: not-allowed;
 }
 
-.upload-form-submit:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+.upload-parallel-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
 }
 
-.upload-form-status {
+.upload-parallel-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  color: var(--color-text-muted);
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
 }
 
-.upload-form-status-text {
-  font-size: 0.875rem;
+.upload-parallel-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-parallel-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.upload-parallel-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.upload-parallel-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.upload-parallel-spinner-tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
+.upload-new-batch-btn {
+  background-color: var(--color-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.upload-new-batch-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.upload-new-batch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-6);
+  align-items: start;
 }

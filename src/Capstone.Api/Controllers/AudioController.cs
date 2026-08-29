@@ -8,17 +8,6 @@ namespace Capstone.Api.Controllers;
 [Route("api/audio")]
 public class AudioController : ControllerBase
 {
-    private static readonly string[] AllowedAudioTypes =
-    [
-        "audio/mpeg",
-        "audio/wav",
-        "audio/ogg",
-        "audio/mp4",
-        "audio/aac",
-        "audio/flac",
-        "audio/x-wav",
-    ];
-
     private readonly UploadAudioUseCase _useCase;
     private readonly GetAudioResultUseCase _getResultUseCase;
     private readonly GetAudioFilesListUseCase _getListUseCase;
@@ -45,22 +34,12 @@ public class AudioController : ControllerBase
         if (file is null || file.Length == 0)
             return BadRequest(new { error = "No file was provided or the file is empty." });
 
-        if (string.IsNullOrWhiteSpace(file.ContentType) ||
-            !AllowedAudioTypes.Contains(file.ContentType))
-        {
-            return BadRequest(new
-            {
-                error = $"Unsupported audio format: '{file.ContentType}'. " +
-                        $"Allowed: mp3, wav, ogg, mp4, aac, flac."
-            });
-        }
-
         await using var stream = file.OpenReadStream();
 
         var request = new UploadAudioRequest
         {
             FileName = file.FileName,
-            ContentType = file.ContentType,
+            ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
             Size = file.Length,
             FileStream = stream
         };

@@ -1,4 +1,15 @@
 import { useEffect, useState } from 'react'
+import {
+  RefreshCw,
+  FileAudio,
+  Sparkles,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Clock,
+  Zap,
+} from 'lucide-react'
 import { ApiError, getAudioFiles } from '../services/api'
 import type { AudioResult } from '../types/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -62,7 +73,7 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
     return (
       <div className="audio-list-loading" role="status" aria-live="polite">
         <LoadingSpinner size="md" />
-        <p>Loading recording history…</p>
+        <p>Loading recording history...</p>
       </div>
     )
   }
@@ -81,6 +92,7 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
   if (audios.length === 0) {
     return (
       <div className="audio-list-empty">
+        <FileAudio size={36} style={{ color: 'var(--color-text-muted)', marginBottom: '8px' }} />
         <p>No recordings uploaded yet.</p>
       </div>
     )
@@ -95,8 +107,9 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
           className="audio-list-refresh-btn"
           onClick={() => void fetchList(true)}
           aria-label="Refresh history"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
         >
-          Refresh
+          <RefreshCw size={13} /> Refresh
         </button>
       </div>
 
@@ -110,17 +123,25 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
               <div className="audio-card-main">
                 <div className="audio-card-meta">
                   <span className={`audio-status-badge ${audio.status}`}>
-                    {isReady ? 'Ready' : 'Processing'}
+                    {isReady ? (
+                      <>
+                        <CheckCircle2 size={12} /> Ready
+                      </>
+                    ) : (
+                      'Processing'
+                    )}
                   </span>
                   <span className="audio-card-filename">{audio.fileName || 'Unnamed File'}</span>
                 </div>
 
                 {isReady && audio.summary && (
                   <div className="audio-card-summary">
-                    <h4 className="audio-card-label">Summary</h4>
+                    <h4 className="audio-card-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Sparkles size={13} /> Summary
+                    </h4>
                     <p className="audio-card-summary-text">{audio.summary.summaryText}</p>
-                    <p className="audio-card-meta-detail">
-                      Model: {audio.summary.modelName} · {formatCreatedAt(audio.summary.createdAt)}
+                    <p className="audio-card-meta-detail" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={11} /> Model: {audio.summary.modelName} · {formatCreatedAt(audio.summary.createdAt)}
                     </p>
                   </div>
                 )}
@@ -128,7 +149,7 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
                 {!isReady && (
                   <div className="audio-card-processing-status">
                     <LoadingSpinner size="sm" />
-                    <span>Transcribing and generating title in the background…</span>
+                    <span>Transcribing and generating title in the background...</span>
                   </div>
                 )}
 
@@ -138,16 +159,19 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
                       type="button"
                       className="audio-card-toggle-transcription"
                       onClick={() => toggleExpand(audio.audioFileId)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
+                      <FileText size={13} />
                       {isExpanded ? 'Hide Transcription' : 'Show Transcription'}
+                      {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </button>
                     {isExpanded && (
                       <div className="audio-card-transcription-content">
                         <p className="audio-card-transcription-text">
                           {audio.transcription.fullText}
                         </p>
-                        <p className="audio-card-meta-detail">
-                          Model: {audio.transcription.modelName} · Took:{' '}
+                        <p className="audio-card-meta-detail" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Zap size={11} /> Model: {audio.transcription.modelName} · Took:{' '}
                           {(audio.transcription.processingTimeMs / 1000).toFixed(2)}s
                         </p>
                       </div>

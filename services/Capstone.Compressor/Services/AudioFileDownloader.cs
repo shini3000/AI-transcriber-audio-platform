@@ -19,7 +19,7 @@ public class AudioFileDownloader
         var uri = new Uri(storageUrl);
         var segments = uri.AbsolutePath.TrimStart('/').Split('/');
         var bucketName = segments[0];
-        var objectName = string.Join("/", segments[1..]);
+        var objectName = Uri.UnescapeDataString(string.Join("/", segments[1..]));
 
         _logger.LogDebug("Downloading from MinIO: bucket={Bucket}, object={Object} → {TempPath}",
             bucketName, objectName, tempPath);

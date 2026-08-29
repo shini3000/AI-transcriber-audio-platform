@@ -7,7 +7,7 @@ export interface UploadResponse {
   wasCompressed: boolean
 }
 
-export type AudioResultStatus = 'pending' | 'ready'
+export type AudioResultStatus = 'pending' | 'ready' | 'rejected'
 
 export interface Transcription {
   fullText: string
@@ -28,4 +28,5 @@ export interface AudioResult {
   fileName: string | null
   transcription: Transcription | null
   summary: Summary | null
+  validationErrorMessage?: string | null
 }

@@ -58,6 +58,10 @@ export function useAudioResult({
           setResult(response)
           setIsPolling(false)
           stopPolling()
+        } else if (response.status === 'rejected') {
+          setError(response.validationErrorMessage ?? 'The file was rejected: invalid audio format.')
+          setIsPolling(false)
+          stopPolling()
         }
       } catch (error) {
         if (cancelled) {
