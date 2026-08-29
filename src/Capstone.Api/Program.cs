@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:8080", "http://localhost:5069")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -82,6 +82,26 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    for (int retry = 0; retry < 5; retry++)
+    {
+        try
+        {
+            db.Database.Migrate();
+            Console.WriteLine("[Database] Migrations applied successfully.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Database] Migration attempt {retry + 1}/5 failed: {ex.Message}");
+            if (retry == 4) throw;
+            Thread.Sleep(2000);
+        }
+    }
+}
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

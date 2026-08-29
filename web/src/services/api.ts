@@ -12,7 +12,8 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5069'
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5069' : '')
+const API_BASE_URL = rawBaseUrl.replace(/\/api\/?$/, '').replace(/\/$/, '')
 const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/audio/upload`
 
 async function readErrorPayload(response: Response): Promise<unknown> {

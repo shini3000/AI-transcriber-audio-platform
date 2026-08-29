@@ -26,11 +26,13 @@ async function handleStartUpload(
     status: 'uploading',
   })
 
+  const baseUrl = (apiBaseUrl || '').replace(/\/api\/?$/, '').replace(/\/$/, '')
+
   try {
     const formData = new FormData()
     formData.append('file', file)
 
-    const uploadRes = await fetch(`${apiBaseUrl}/api/audio/upload`, {
+    const uploadRes = await fetch(`${baseUrl}/api/audio/upload`, {
       method: 'POST',
       body: formData,
     })
@@ -78,7 +80,7 @@ async function handleStartUpload(
 
       try {
         const resultRes = await fetch(
-          `${apiBaseUrl}/api/audio/${audioFileId}/result`,
+          `${baseUrl}/api/audio/${audioFileId}/result`,
         )
         if (!resultRes.ok) {
           if (resultRes.status === 404) {

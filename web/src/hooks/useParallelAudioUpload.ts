@@ -5,7 +5,8 @@ import type {
   WorkerOutMessage,
 } from '../types/parallelUpload'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5069'
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5069' : '')
+const API_BASE_URL = rawBaseUrl.replace(/\/api\/?$/, '').replace(/\/$/, '')
 
 interface UseParallelAudioUploadProps {
   onItemCompleted?: () => void

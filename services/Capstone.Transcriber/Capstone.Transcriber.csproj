@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
     <UserSecretsId>dotnet-Capstone.Transcriber-4f1d9a91-0b7a-46b7-9607-151782f7b404</UserSecretsId>
   </PropertyGroup>
 
