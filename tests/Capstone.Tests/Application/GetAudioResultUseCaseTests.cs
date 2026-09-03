@@ -133,5 +133,7 @@ public class GetAudioResultUseCaseTests
         Assert.Equal("Key meeting points", result.Summary!.SummaryText);
         Assert.Equal("qwen2.5-0.5b", result.Summary.ModelName);
         Assert.Equal(summary.CreatedAt, result.Summary.CreatedAt);
+        Assert.Equal($"/api/audio/{AudioFileId}/stream/original", result.OriginalAudioUrl);
+        Assert.Equal("audio.mp3", result.OriginalFileName);
     }
 }

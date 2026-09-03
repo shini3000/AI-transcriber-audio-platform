@@ -64,6 +64,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CompressedAt);
 
             entity.Property(e => e.CompressionDurationMs);
+
+            entity.Property(e => e.OriginalStorageUrl)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.FilteredStorageUrl)
+                .HasMaxLength(500);
         });
 
         modelBuilder.Entity<AudioTranscription>(entity =>

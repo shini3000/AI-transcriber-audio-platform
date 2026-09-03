@@ -34,6 +34,11 @@ public class GetAudioResultUseCase
         }
 
         var transcription = await _transcriptionRepository.GetByAudioFileIdAsync(audioFileId);
+        var originalAudioUrl = $"/api/audio/{audioFile.Id}/stream/original";
+        var filteredAudioUrl = !string.IsNullOrEmpty(audioFile.FilteredStorageUrl)
+            ? $"/api/audio/{audioFile.Id}/stream/filtered"
+            : null;
+
         if (transcription is null)
         {
             return new AudioResultResponse(
@@ -41,7 +46,12 @@ public class GetAudioResultUseCase
                 audioFile.Id,
                 audioFile.FileName,
                 null,
-                null);
+                null)
+            {
+                OriginalAudioUrl = originalAudioUrl,
+                FilteredAudioUrl = filteredAudioUrl,
+                OriginalFileName = audioFile.OriginalFileName
+            };
         }
 
         var summary = transcription.Summary;
@@ -52,7 +62,12 @@ public class GetAudioResultUseCase
                 audioFile.Id,
                 audioFile.FileName,
                 null,
-                null);
+                null)
+            {
+                OriginalAudioUrl = originalAudioUrl,
+                FilteredAudioUrl = filteredAudioUrl,
+                OriginalFileName = audioFile.OriginalFileName
+            };
         }
 
         return new AudioResultResponse(
@@ -67,6 +82,11 @@ public class GetAudioResultUseCase
             new SummaryDto(
                 summary.SummaryText,
                 summary.ModelName,
-                summary.CreatedAt));
+                summary.CreatedAt))
+        {
+            OriginalAudioUrl = originalAudioUrl,
+            FilteredAudioUrl = filteredAudioUrl,
+            OriginalFileName = audioFile.OriginalFileName
+        };
     }
 }

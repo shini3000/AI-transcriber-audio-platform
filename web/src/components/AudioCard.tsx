@@ -17,6 +17,7 @@ import {
 import type { ProcessingAudioItem } from '../types/parallelUpload'
 import { formatBytes } from '../lib/formatBytes'
 import { LoadingSpinner } from './LoadingSpinner'
+import { AudioPreviewBar } from './AudioPreviewBar'
 import './AudioCard.css'
 
 interface AudioCardProps {
@@ -178,6 +179,13 @@ export function AudioCard({ item, onRemove }: AudioCardProps) {
 
         {status === 'ready' && audioResult && (
           <div className="audio-card-results">
+            <AudioPreviewBar
+              originalUrl={audioResult.originalAudioUrl ?? uploadResponse?.storageUrl ?? `/api/audio/${audioResult.audioFileId}/stream/original`}
+              filteredUrl={audioResult.filteredAudioUrl ?? `/api/audio/${audioResult.audioFileId}/stream/filtered`}
+              originalFileName={audioResult.originalFileName ?? uploadResponse?.fileName ?? fileName}
+              filteredFileName={audioResult.fileName ?? uploadResponse?.fileName}
+            />
+
             {audioResult.summary && (
               <div className="audio-card-summary-box">
                 <div className="audio-card-section-label">

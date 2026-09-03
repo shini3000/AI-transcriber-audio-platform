@@ -17,4 +17,6 @@ public class AudioFile
     public DateTime? CompressedAt { get; set; }
     public long CompressionDurationMs { get; set; }
     public DateTime? ProcessedAt { get; set; }
+    public string? OriginalStorageUrl { get; set; }
+    public string? FilteredStorageUrl { get; set; }
 }

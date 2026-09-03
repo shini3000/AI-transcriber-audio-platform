@@ -112,3 +112,12 @@ export async function getAudioFiles(): Promise<AudioResult[]> {
 
   return (await response.json()) as AudioResult[]
 }
+
+export function resolveAudioUrl(url?: string | null): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`
+  return `${API_BASE_URL}${cleanPath}`
+}

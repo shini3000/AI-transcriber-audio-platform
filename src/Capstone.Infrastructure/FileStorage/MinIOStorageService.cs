@@ -55,4 +55,26 @@ public class MinIOStorageService : IFileStorageService
         var protocol = _settings.UseSsl ? "https" : "http";
         return $"{protocol}://{_settings.Endpoint}/{_settings.BucketName}/{objectName}";
     }
+
+    public async Task<Stream> GetFileStreamAsync(string storageUrl, CancellationToken cancellationToken = default)
+    {
+        var uri = new Uri(storageUrl);
+        var segments = uri.AbsolutePath.TrimStart('/').Split('/');
+        var bucketName = segments.Length > 0 && !string.IsNullOrEmpty(segments[0]) ? segments[0] : _settings.BucketName;
+        var objectName = Uri.UnescapeDataString(string.Join("/", segments[1..]));
+
+        var memoryStream = new MemoryStream();
+        await _minioClient.GetObjectAsync(
+            new GetObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectName)
+                .WithCallbackStream(stream =>
+                {
+                    stream.CopyTo(memoryStream);
+                }),
+            cancellationToken);
+
+        memoryStream.Position = 0;
+        return memoryStream;
+    }
 }
