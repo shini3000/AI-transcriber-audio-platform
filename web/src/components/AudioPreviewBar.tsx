@@ -169,7 +169,6 @@ export function AudioPreviewBar({
 
       {/* Top Header: Comparison Selector Tabs */}
       <div className="preview-bar-tabs">
-        <span className="preview-bar-tabs-title">Comparar Audios:</span>
         <div className="preview-bar-toggle-group" role="tablist">
           <button
             type="button"
@@ -180,9 +179,9 @@ export function AudioPreviewBar({
             disabled={!resolvedOriginal}
             title={originalFileName ? `Original: ${originalFileName}` : 'Audio original'}
           >
-            <FileAudio size={14} />
+            <FileAudio size={13} />
             <span>Audio Original</span>
-            {!resolvedOriginal && <span className="tab-pill-na">No disponible</span>}
+            {!resolvedOriginal && <span className="tab-pill-na">(N/A)</span>}
           </button>
 
           <button
@@ -194,9 +193,9 @@ export function AudioPreviewBar({
             disabled={!resolvedFiltered}
             title={filteredFileName ? `Con Filtro: ${filteredFileName}` : 'Audio filtrado'}
           >
-            <Sparkles size={14} className="sparkle-icon" />
-            <span>Con Filtro (Realce de Voz)</span>
-            {!resolvedFiltered && <span className="tab-pill-na">Procesando...</span>}
+            <Sparkles size={13} className="sparkle-icon" />
+            <span>Con Filtro</span>
+            {!resolvedFiltered && <span className="tab-pill-na">(...)</span>}
           </button>
         </div>
       </div>
@@ -205,49 +204,28 @@ export function AudioPreviewBar({
       <div className="preview-bar-filter-info">
         {activeVariant === 'filtered' ? (
           <div className="filter-badge filter-badge-active">
-            <Sparkles size={13} />
+            <Sparkles size={12} className="sparkle-icon" />
             <span>
-              <strong>Filtro aplicado:</strong> Realce Marcado de Voz (High-pass 400Hz + Low-pass 3000Hz + Ecualizador Vocal +10dB + Boost x1.8)
+              <strong>Filtro:</strong> Realce de Voz (400Hz-3kHz + Boost +8dB)
             </span>
           </div>
         ) : (
           <div className="filter-badge filter-badge-original">
-            <FileAudio size={13} />
+            <FileAudio size={12} />
             <span>
-              <strong>Audio Original:</strong> Pista directa sin procesar
+              <strong>Audio:</strong> Pista original sin procesar
             </span>
           </div>
         )}
       </div>
 
-      {/* Main Controls Row */}
-      <div className="preview-bar-controls">
-        <button
-          type="button"
-          className="preview-btn-restart"
-          onClick={handleRestart}
-          title="Reiniciar reproducción"
-          aria-label="Reiniciar reproducción"
-        >
-          <RotateCcw size={15} />
-        </button>
-
-        <button
-          type="button"
-          className={`preview-btn-play ${isPlaying ? 'is-playing' : ''}`}
-          onClick={togglePlay}
-          disabled={!currentSourceUrl || hasError}
-          title={isPlaying ? 'Pausar' : 'Reproducir'}
-          aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
-        >
-          {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: '2px' }} />}
-        </button>
-
-        {/* Scrubber & Time */}
-        <div className="preview-scrubber-group">
-          <div className="preview-time-display current-time">
+      {/* Player Section: Timeline on Top, Controls Below */}
+      <div className="preview-player-container">
+        {/* Timeline Row */}
+        <div className="preview-timeline-row">
+          <span className="preview-time-display current-time">
             {formatDuration(currentTime)}
-          </div>
+          </span>
           <div className="preview-slider-container">
             <input
               type="range"
@@ -263,47 +241,71 @@ export function AudioPreviewBar({
               }}
             />
           </div>
-          <div className="preview-time-display total-time">
+          <span className="preview-time-display total-time">
             {formatDuration(duration)}
-          </div>
+          </span>
         </div>
 
-        {/* Speed button */}
-        <button
-          type="button"
-          className="preview-btn-speed"
-          onClick={cycleSpeed}
-          title="Velocidad de reproducción"
-          aria-label={`Velocidad ${playbackRate}x`}
-        >
-          {playbackRate}x
-        </button>
+        {/* Buttons Row */}
+        <div className="preview-actions-row">
+          <div className="preview-actions-left">
+            <button
+              type="button"
+              className="preview-btn-restart"
+              onClick={handleRestart}
+              title="Reiniciar reproducción"
+              aria-label="Reiniciar reproducción"
+            >
+              <RotateCcw size={14} />
+            </button>
 
-        {/* Volume button */}
-        <div className="preview-volume-group">
-          <button
-            type="button"
-            className="preview-btn-mute"
-            onClick={toggleMute}
-            title={isMuted ? 'Activar sonido' : 'Silenciar'}
-            aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
-          >
-            {isMuted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={isMuted ? 0 : volume}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value)
-              setVolume(val)
-              if (isMuted && val > 0) setIsMuted(false)
-            }}
-            className="preview-volume-slider"
-            aria-label="Volumen"
-          />
+            <button
+              type="button"
+              className={`preview-btn-play ${isPlaying ? 'is-playing' : ''}`}
+              onClick={togglePlay}
+              disabled={!currentSourceUrl || hasError}
+              title={isPlaying ? 'Pausar' : 'Reproducir'}
+              aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+            </button>
+
+            <button
+              type="button"
+              className="preview-btn-speed"
+              onClick={cycleSpeed}
+              title="Velocidad de reproducción"
+              aria-label={`Velocidad ${playbackRate}x`}
+            >
+              {playbackRate}x
+            </button>
+          </div>
+
+          <div className="preview-actions-right">
+            <button
+              type="button"
+              className="preview-btn-mute"
+              onClick={toggleMute}
+              title={isMuted ? 'Activar sonido' : 'Silenciar'}
+              aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
+            >
+              {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={isMuted ? 0 : volume}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value)
+                setVolume(val)
+                if (isMuted && val > 0) setIsMuted(false)
+              }}
+              className="preview-volume-slider"
+              aria-label="Volumen"
+            />
+          </div>
         </div>
       </div>
 

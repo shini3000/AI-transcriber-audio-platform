@@ -13,7 +13,6 @@ import {
 import { ApiError, getAudioFiles } from '../services/api'
 import type { AudioResult } from '../types/api'
 import { LoadingSpinner } from './LoadingSpinner'
-import { AudioPreviewBar } from './AudioPreviewBar'
 import './AudioList.css'
 
 interface AudioListProps {
@@ -134,15 +133,6 @@ export function AudioList({ refreshTrigger = 0 }: AudioListProps) {
                   </span>
                   <span className="audio-card-filename">{audio.fileName || 'Unnamed File'}</span>
                 </div>
-
-                {isReady && (
-                  <AudioPreviewBar
-                    originalUrl={audio.originalAudioUrl ?? `/api/audio/${audio.audioFileId}/stream/original`}
-                    filteredUrl={audio.filteredAudioUrl ?? `/api/audio/${audio.audioFileId}/stream/filtered`}
-                    originalFileName={audio.originalFileName ?? audio.fileName}
-                    filteredFileName={audio.fileName}
-                  />
-                )}
 
                 {isReady && audio.summary && (
                   <div className="audio-card-summary">
