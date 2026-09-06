@@ -1,0 +1,40 @@
+@startuml
+[*] --> uploaded : API recibe archivo y guarda en MinIO
+
+state uploaded {
+  uploaded : Audio original guardado en S3
+  uploaded : En espera de validacion
+}
+
+uploaded --> validated : Validator comprueba Magic Bytes validos
+uploaded --> rejected : Magic Bytes no coinciden o archivo corrupto
+
+state rejected {
+  rejected : Validacion fallida
+  rejected : Se almacena mensaje de error
+  rejected : Estado terminal
+}
+
+state validated {
+  validated : Formato autentico verificado
+  validated : En espera de transcodificacion
+}
+
+validated --> compressed : Compressor transcodifica a AAC 128k y sube variante filtrada
+
+state compressed {
+  compressed : Variante AAC lista
+  compressed : En espera de inferencia Whisper y LLM
+}
+
+compressed --> ready : Transcripcion y Resumen guardados satisfactoriamente
+
+state ready {
+  ready : Procesamiento completado con exito
+  ready : Disponible para consulta y streaming dual
+  ready : Estado terminal
+}
+
+rejected --> [*]
+ready --> [*]
+@enduml

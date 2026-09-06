@@ -1,0 +1,24 @@
+@startuml
+autonumber
+actor Usuario
+participant "AudioPreviewBar (UI)" as Player
+participant "AudioController.Stream" as API
+participant "MinIO Object Storage" as MinIO
+
+Usuario -> Player : Selecciona variante "Original"
+Player -> API : GET /api/audio/{id}/stream/original\n(Range: bytes=0-1048575)
+API -> MinIO : Lee stream del objeto 'OriginalStorageUrl'
+MinIO --> API : Stream binario
+API --> Player : HTTP 206 Partial Content (audio/mpeg o codec nativo)
+
+Usuario -> Player : Conmuta a variante "Filtrado (AAC)"
+Player -> API : GET /api/audio/{id}/stream/filtered\n(Range: bytes=0-1048575)
+API -> MinIO : Lee stream del objeto 'FilteredStorageUrl'
+MinIO --> API : Stream binario
+API --> Player : HTTP 206 Partial Content (audio/aac)
+
+note over Player
+  El usuario percibe la equivalencia de calidad acustica
+  con una reduccion de mas del 70% en el peso del archivo.
+end note
+@enduml

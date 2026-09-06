@@ -1,0 +1,43 @@
+@startuml
+node "Docker Host" {
+  portin "Puerto 8080" as P8080
+  portin "Puerto 5069" as P5069
+  portin "Puerto 15672" as P15672
+  portin "Puerto 9001" as P9001
+  portin "Puerto 5432" as P5432
+
+  node "Docker Network: capstone (Bridge)" {
+    [capstone-web (Nginx)] as WEB
+    [capstone-api (.NET 8 Web API)] as API
+    [capstone-validator (Worker Validacion)] as VAL
+    [capstone-compressor (Worker FFmpeg)] as CMP
+    [capstone-worker (Transcriber Whisper+Qwen)] as WRK
+    queue "capstone-rabbitmq (RabbitMQ 4)" as RMQ
+    database "capstone-db (PostgreSQL 16)" as DB
+    storage "capstone-minio (MinIO S3)" as MINIO
+  }
+}
+
+P8080 --> WEB
+P5069 --> API
+P15672 --> RMQ
+P9001 --> MINIO
+P5432 --> DB
+
+WEB --> API : Proxy /api/
+API --> RMQ
+API --> DB
+API --> MINIO
+
+VAL --> RMQ
+VAL --> DB
+VAL --> MINIO
+
+CMP --> RMQ
+CMP --> DB
+CMP --> MINIO
+
+WRK --> RMQ
+WRK --> DB
+WRK --> MINIO
+@enduml

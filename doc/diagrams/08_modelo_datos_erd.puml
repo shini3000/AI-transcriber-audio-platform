@@ -1,0 +1,46 @@
+@startuml
+entity "AudioFiles" as AF {
+  * Id : uuid <<PK>>
+  --
+  * FileName : varchar(255)
+  * ContentType : varchar(100)
+  * Size : bigint
+  * StorageUrl : varchar(500)
+  * UploadedAt : timestamp
+  * Status : varchar(50)
+  ValidationErrorMessage : varchar(500)
+  ValidatedAt : timestamp
+  * OriginalFileName : varchar(255)
+  * OriginalContentType : varchar(100)
+  * OriginalSize : bigint
+  CompressedAt : timestamp
+  CompressionDurationMs : bigint
+  ProcessedAt : timestamp
+  OriginalStorageUrl : varchar(500)
+  FilteredStorageUrl : varchar(500)
+}
+
+entity "AudioTranscriptions" as AT {
+  * Id : uuid <<PK>>
+  --
+  * AudioFileId : uuid <<FK>>
+  * FullText : text
+  * ModelName : varchar(100)
+  * ProcessingTimeMs : bigint
+  * CreatedAt : timestamp
+}
+
+entity "AudioSummaries" as ASUM {
+  * Id : uuid <<PK>>
+  --
+  * AudioFileId : uuid <<FK>>
+  * TranscriptionId : uuid <<FK>>
+  * SummaryText : text
+  * ModelName : varchar(100)
+  * CreatedAt : timestamp
+}
+
+AF ||--o| AT : "tiene (1 a 0..1)"
+AF ||--o| ASUM : "tiene (1 a 0..1)"
+AT ||--o| ASUM : "origina (1 a 0..1)"
+@enduml

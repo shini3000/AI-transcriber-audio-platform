@@ -1,0 +1,78 @@
+@startuml
+autonumber
+
+actor Usuario
+participant "React UI / Dropzone" as UI
+participant "Web Worker" as WW
+participant "Capstone.Api" as API
+participant "MinIO (S3)" as MinIO
+database "PostgreSQL" as DB
+queue "RabbitMQ (capstone.audio)" as RMQ
+participant "Validator Worker" as VAL
+participant "Compressor Worker" as CMP
+participant "Transcriber / LLM Worker" as TX
+
+Usuario -> UI : Arrastra y suelta archivo de audio
+UI -> WW : Encola archivo (START_UPLOAD)
+WW -> API : POST /api/audio/upload (multipart/form-data)
+
+group Fase 1: Ingesta Inmediata
+  API -> MinIO : Stream upload a bucket 'audio'
+  MinIO --> API : URL de almacenamiento (OriginalStorageUrl)
+  API -> DB : INSERT INTO AudioFiles (Status='uploaded')
+  API -> RMQ : Publica evento 'audio.uploaded'
+  API --> WW : 201 Created (AudioId, FileName, Status='uploaded')
+end
+
+WW --> UI : Notifica estado 'processing'
+
+par Polling desacoplado en cliente
+  loop Cada 2.5 segundos
+    WW -> API : GET /api/audio/{id}/result
+    API -> DB : Consulta estado y relaciones
+    API --> WW : JSON Estado actual (pending / ready / rejected)
+  end
+else Pipeline Asincrono en Backend
+  group Fase 2: Validacion Estricta
+    RMQ -> VAL : Mensaje de cola 'audio.validate'
+    VAL -> MinIO : Descarga primeros bytes a temp
+    VAL -> VAL : Comprobacion de Magic Bytes (MP3, WAV, OGG, FLAC, M4A)
+    alt Formato no valido
+      VAL -> DB : UPDATE AudioFiles SET Status='rejected', Reason='...'
+      VAL -> RMQ : BasicAck (Termina procesamiento)
+    else Formato verificado
+      VAL -> DB : UPDATE AudioFiles SET Status='validated', ValidatedAt=NOW()
+      VAL -> RMQ : Publica evento 'audio.validated'
+      VAL -> RMQ : BasicAck
+    end
+  end
+
+  group Fase 3: Transcodificacion y Compresion
+    RMQ -> CMP : Mensaje de cola 'audio.compress'
+    CMP -> MinIO : Descarga archivo original
+    CMP -> CMP : Ejecuta FFmpeg (Transcodifica a AAC 128kbps)
+    CMP -> MinIO : Sube archivo comprimido (.aac)
+    CMP -> DB : UPDATE AudioFiles SET FilteredStorageUrl=..., CompressionDurationMs=...
+    CMP -> RMQ : Publica evento 'audio.compressed'
+    CMP -> RMQ : BasicAck
+  end
+
+  group Fase 4: Inteligencia Artificial
+    RMQ -> TX : Mensaje de cola 'audio.transcribe'
+    TX -> MinIO : Descarga archivo comprimido
+    TX -> TX : Whisper.net: Transcripcion fonetica (speech-to-text)
+    TX -> DB : INSERT INTO AudioTranscriptions
+    TX -> TX : LLamaSharp + Qwen2.5 LLM: Generacion de resumen
+    TX -> DB : INSERT INTO AudioSummaries
+    TX -> RMQ : Publica evento 'audio.processed'
+    TX -> RMQ : BasicAck
+  end
+
+  API -> DB : AudioProcessedEventConsumer marca ProcessedAt
+end
+
+WW -> API : GET /api/audio/{id}/result
+API --> WW : 200 OK (Status='ready', TranscriptionDto, SummaryDto)
+WW --> UI : Notifica estado 'ready' con datos de IA
+UI --> Usuario : Muestra texto transcrito, resumen IA y selector Original / Comprimido
+@enduml

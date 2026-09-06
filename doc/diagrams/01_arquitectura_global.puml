@@ -1,0 +1,67 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "Capa de Presentacion / Cliente" {
+  [Web Client (React 18 + TS)] as UI
+  [Web Worker (audioUpload.worker)] as WW
+}
+
+package "Gateway & Reverse Proxy" {
+  [Nginx (Puerto 8080:80)] as NGINX
+}
+
+package "Capa API Principal (Clean Architecture)" {
+  [Capstone.Api (.NET 8 - Puerto 5069:8080)] as API
+  [AudioProcessedEventConsumer (HostedService)] as API_CONS
+}
+
+package "Message Broker (RabbitMQ 4)" {
+  queue "Topic Exchange: capstone.audio" as EX
+  queue "Cola: audio.validate" as Q_VAL
+  queue "Cola: audio.compress" as Q_CMP
+  queue "Cola: audio.transcribe" as Q_TX
+  queue "Cola: audio.processed.api" as Q_PROC
+}
+
+package "Pipeline de Procesamiento Distribuido (Workers)" {
+  [Capstone.Validator\n- Inspeccion Magic Bytes\n- Filtro anti-tampering] as W_VAL
+  [Capstone.Compressor\n- FFmpeg AAC 128kbps\n- Optimizacion de tamano] as W_CMP
+  [Capstone.Transcriber\n- Whisper ASR (tiny)\n- Qwen2.5 LLM Summarizer] as W_TX
+}
+
+database "PostgreSQL 16\n(AudioFiles, Transcriptions, Summaries)" as DB
+storage "MinIO Object Storage\nBucket: audio\n(Originales + Filtrados AAC)" as MINIO
+
+UI <--> WW : PostMessage / Eventos
+UI --> NGINX : HTTP / SPA Bundle
+NGINX --> API : Proxy /api/
+WW --> NGINX : Upload / Polling
+
+API --> MINIO : 1. Sube audio crudo
+API --> DB : 2. Inserta registro inicial
+API --> EX : 3. Publica 'audio.uploaded'
+
+EX --> Q_VAL : audio.uploaded
+EX --> Q_CMP : audio.validated
+EX --> Q_TX : audio.compressed
+EX --> Q_PROC : audio.processed
+
+Q_VAL --> W_VAL : Consume
+W_VAL --> MINIO : Descarga para validar
+W_VAL --> DB : Actualiza status: validated/rejected
+W_VAL --> EX : Publica 'audio.validated'
+
+Q_CMP --> W_CMP : Consume
+W_CMP --> MINIO : Descarga audio
+W_CMP --> MINIO : Sube audio comprimido .aac
+W_CMP --> DB : Actualiza URLs y metricas
+W_CMP --> EX : Publica 'audio.compressed'
+
+Q_TX --> W_TX : Consume
+W_TX --> MINIO : Descarga AAC
+W_TX --> DB : Guarda Transcripcion & Resumen
+W_TX --> EX : Publica 'audio.processed'
+
+Q_PROC --> API_CONS : Consume
+API_CONS --> DB : Marca ProcessedAt
+@enduml

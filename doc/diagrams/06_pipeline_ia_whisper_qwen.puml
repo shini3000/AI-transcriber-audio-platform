@@ -1,0 +1,28 @@
+@startuml
+start
+
+partition "1. Ingesta de Audio para Inferencia" {
+  :Audio AAC Comprimido (MinIO);
+  :Descarga a disco temporal (/tmp);
+}
+
+partition "2. Transcripcion Fonetica Automatica (Speech-to-Text)" {
+  :FFmpeg: Conversion a PCM 16-bit 16kHz Mono WAV;
+  :Whisper.net (Modelo ggml-tiny.bin);
+  :Texto Completo Transcrito (FullText);
+  :Guardar en tabla AudioTranscriptions;
+}
+
+partition "3. Sintesis y Resumen Semantico (LLM)" {
+  :Construccion de Prompt Estructurado:\n'Resume en pocas oraciones clave el siguiente audio...';
+  :LLamaSharp Engine\nModelo: Qwen2.5-0.5B-Instruct-Q8_0.gguf\n(Contexto: 2048 tokens, Temp: 0.3);
+  :Texto de Resumen Conciso;
+  :Guardar en tabla AudioSummaries;
+}
+
+partition "4. Notificacion y Cierre de Evento" {
+  :Publicar 'audio.processed' en RabbitMQ;
+}
+
+stop
+@enduml

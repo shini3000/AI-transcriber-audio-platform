@@ -1,0 +1,62 @@
+@startuml
+package "Capa 1: Capstone.Domain (Nucleo Puro)" {
+  class AudioFile {
+    +Guid Id
+    +string FileName
+    +string ContentType
+    +long Size
+    +string StorageUrl
+    +DateTime UploadedAt
+    +string Status
+    +string ValidationErrorMessage
+    +string OriginalStorageUrl
+    +string FilteredStorageUrl
+  }
+  class AudioTranscription {
+    +Guid Id
+    +Guid AudioFileId
+    +string FullText
+    +string ModelName
+    +long ProcessingTimeMs
+  }
+  class AudioSummary {
+    +Guid Id
+    +Guid AudioFileId
+    +Guid TranscriptionId
+    +string SummaryText
+    +string ModelName
+  }
+}
+
+package "Capa 2: Capstone.Application (Casos de Uso & Puertos)" {
+  class UploadAudioUseCase
+  class GetAudioResultUseCase
+  class GetAudioFilesListUseCase
+
+  interface IFileStorageService
+  interface IAudioFileRepository
+  interface IAudioEventPublisher
+  interface IAudioTranscriptionRepository
+}
+
+package "Capa 3: Capstone.Infrastructure (Adaptadores Concretos)" {
+  class MinIOStorageService
+  class AudioFileRepository
+  class RabbitMQEventPublisher
+  class FFmpegCompressionService
+  class AppDbContext
+}
+
+package "Capa 4: Capstone.Api & Services (Presentacion y Workers)" {
+  class AudioController
+  class AudioValidationWorker
+  class AudioCompressionWorker
+  class AudioProcessingWorker
+}
+
+"Capa 2: Capstone.Application (Casos de Uso & Puertos)" ..> "Capa 1: Capstone.Domain (Nucleo Puro)"
+"Capa 3: Capstone.Infrastructure (Adaptadores Concretos)" ..> "Capa 2: Capstone.Application (Casos de Uso & Puertos)"
+"Capa 3: Capstone.Infrastructure (Adaptadores Concretos)" ..> "Capa 1: Capstone.Domain (Nucleo Puro)"
+"Capa 4: Capstone.Api & Services (Presentacion y Workers)" ..> "Capa 3: Capstone.Infrastructure (Adaptadores Concretos)"
+"Capa 4: Capstone.Api & Services (Presentacion y Workers)" ..> "Capa 2: Capstone.Application (Casos de Uso & Puertos)"
+@enduml

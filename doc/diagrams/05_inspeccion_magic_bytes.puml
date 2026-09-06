@@ -1,0 +1,28 @@
+@startuml
+start
+:Archivo recibido en Validator;
+:Leer primeros 12 bytes de cabecera;
+
+if (Es MP3? (Header 'ID3' o Sync Frame 0xFFE0)) then (si)
+  :Formato Valido;
+elseif (Es WAV? (Bytes 0-3 = 'RIFF' & Bytes 8-11 = 'WAVE')) then (si)
+  :Formato Valido;
+elseif (Es OGG? (Bytes 0-3 = 'OggS')) then (si)
+  :Formato Valido;
+elseif (Es FLAC? (Bytes 0-3 = 'fLaC')) then (si)
+  :Formato Valido;
+elseif (Es MP4 / M4A? (Bytes 4-7 = 'ftyp')) then (si)
+  :Formato Valido;
+elseif (Es AAC puro? (Sync Word 0xFFF0 o caja 'ftyp')) then (si)
+  :Formato Valido;
+else (no)
+  :Formato Invalido o Falsificado;
+  :Actualizar Status = 'rejected';
+  :Almacenar ValidationErrorMessage;
+  stop
+endif
+
+:Actualizar Status = 'validated';
+:Publicar 'audio.validated';
+stop
+@enduml

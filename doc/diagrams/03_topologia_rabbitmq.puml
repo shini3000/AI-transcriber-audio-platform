@@ -1,0 +1,43 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "Productores" {
+  [UploadAudioUseCase\n(Capstone.Api)] as P1
+  [AudioValidatedPublisher\n(Capstone.Validator)] as P2
+  [AudioCompressedPublisher\n(Capstone.Compressor)] as P3
+  [AudioProcessedPublisher\n(Capstone.Transcriber)] as P4
+}
+
+package "Broker: Topic Exchange" {
+  queue "Exchange: capstone.audio\n(Type: Topic, Durable)" as EX
+}
+
+package "Colas Durables" {
+  queue "audio.validate\n(Binding: audio.uploaded)" as Q1
+  queue "audio.compress\n(Binding: audio.validated)" as Q2
+  queue "audio.transcribe\n(Binding: audio.compressed)" as Q3
+  queue "audio.processed.api\n(Binding: audio.processed)" as Q4
+}
+
+package "Consumidores (Workers)" {
+  [AudioValidationWorker\n(MaxConcurrency: 4)] as C1
+  [AudioCompressionWorker\n(MaxConcurrency: 4)] as C2
+  [AudioProcessingWorker\n(MaxConcurrency: 2)] as C3
+  [AudioProcessedEventConsumer\n(API HostedService)] as C4
+}
+
+P1 --> EX : audio.uploaded
+P2 --> EX : audio.validated
+P3 --> EX : audio.compressed
+P4 --> EX : audio.processed
+
+EX --> Q1 : audio.uploaded
+EX --> Q2 : audio.validated
+EX --> Q3 : audio.compressed
+EX --> Q4 : audio.processed
+
+Q1 --> C1 : BasicGet / Prefetch
+Q2 --> C2 : BasicGet / Prefetch
+Q3 --> C3 : BasicGet / Prefetch
+Q4 --> C4 : BasicGet / Prefetch
+@enduml

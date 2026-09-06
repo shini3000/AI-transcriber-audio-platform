@@ -1,0 +1,32 @@
+@startuml
+package "Navegador - Hilo Principal (UI)" {
+  [FileDropzone\n(Drag & Drop / Selector)] as DROP
+  [Estado Global / React Hooks\n(audioItems Map)] as STATE
+  [AudioCard & AudioList\n(Tarjetas y Estados)] as CARD
+  [AudioPreviewBar\n(Reproductor Dual A/B)] as PLAYER
+
+  DROP -> STATE
+  STATE -> CARD
+  CARD -> PLAYER
+}
+
+package "Navegador - Hilo Secundario (Web Worker)" {
+  [audioUpload.worker.ts] as WORKER
+  [Cola de Subida Concurrente] as QUEUE
+  [Interval Polling Engine\n(2500ms por archivo)] as POLL
+
+  WORKER -> QUEUE
+  QUEUE -> POLL
+}
+
+package "Servidor Backend (Nginx / API)" {
+  [POST /api/audio/upload] as API_UP
+  [GET /api/audio/{id}/result] as API_RES
+}
+
+DROP --> WORKER : START_UPLOAD
+QUEUE --> API_UP : fetch multipart
+API_UP --> WORKER : 201 Created con ID
+POLL --> API_RES : fetch status
+WORKER --> STATE : postMessage (STATUS_UPDATE:\nuploading / processing / ready / rejected)
+@enduml
