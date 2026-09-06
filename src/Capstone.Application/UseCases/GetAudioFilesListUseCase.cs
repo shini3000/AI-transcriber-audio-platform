@@ -23,6 +23,11 @@ public class GetAudioFilesListUseCase
             if (audioFile.Status == "rejected")
                 continue;
 
+            var originalAudioUrl = $"/api/audio/{audioFile.Id}/stream/original";
+            var filteredAudioUrl = !string.IsNullOrEmpty(audioFile.FilteredStorageUrl)
+                ? $"/api/audio/{audioFile.Id}/stream/filtered"
+                : null;
+
             if (transcription is null)
             {
                 responses.Add(new AudioResultResponse(
@@ -30,7 +35,12 @@ public class GetAudioFilesListUseCase
                     audioFile.Id,
                     audioFile.FileName,
                     null,
-                    null));
+                    null)
+                {
+                    OriginalAudioUrl = originalAudioUrl,
+                    FilteredAudioUrl = filteredAudioUrl,
+                    OriginalFileName = audioFile.OriginalFileName
+                });
                 continue;
             }
 
@@ -42,7 +52,12 @@ public class GetAudioFilesListUseCase
                     audioFile.Id,
                     audioFile.FileName,
                     null,
-                    null));
+                    null)
+                {
+                    OriginalAudioUrl = originalAudioUrl,
+                    FilteredAudioUrl = filteredAudioUrl,
+                    OriginalFileName = audioFile.OriginalFileName
+                });
                 continue;
             }
 
@@ -58,7 +73,12 @@ public class GetAudioFilesListUseCase
                 new SummaryDto(
                     summary.SummaryText,
                     summary.ModelName,
-                    summary.CreatedAt)));
+                    summary.CreatedAt))
+            {
+                OriginalAudioUrl = originalAudioUrl,
+                FilteredAudioUrl = filteredAudioUrl,
+                OriginalFileName = audioFile.OriginalFileName
+            });
         }
 
         return responses;

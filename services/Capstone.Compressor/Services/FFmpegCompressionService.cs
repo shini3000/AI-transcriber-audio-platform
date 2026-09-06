@@ -21,6 +21,7 @@ public class FFmpegCompressionService
     {
         var ffmpegPath = _configuration["FFmpeg:FfmpegPath"] ?? "ffmpeg";
         var bitrate = _configuration["FFmpeg:BitRate"] ?? "128k";
+        var audioFilter = _configuration["FFmpeg:AudioFilter"] ?? "highpass=f=400,lowpass=f=3000,equalizer=f=1200:t=q:w=1.2:g=8,volume=1.8";
         var outputPath = Path.ChangeExtension(inputPath, ".aac");
         if (outputPath == inputPath)
         {
@@ -28,10 +29,11 @@ public class FFmpegCompressionService
         }
 
         var sw = Stopwatch.StartNew();
+        var filterArg = string.IsNullOrWhiteSpace(audioFilter) ? string.Empty : $"-af \"{audioFilter}\" ";
         var startInfo = new ProcessStartInfo
         {
             FileName = ffmpegPath,
-            Arguments = $"-y -threads 1 -vn -nostats -loglevel error -i \"{inputPath}\" -c:a aac -b:a {bitrate} \"{outputPath}\"",
+            Arguments = $"-y -threads 1 -vn -nostats -loglevel error -i \"{inputPath}\" {filterArg}-c:a aac -b:a {bitrate} \"{outputPath}\"",
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true

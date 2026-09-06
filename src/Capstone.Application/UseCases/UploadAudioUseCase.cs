@@ -36,7 +36,8 @@ public class UploadAudioUseCase
             url,
             originalFileName: request.FileName,
             originalContentType: request.ContentType,
-            originalSize: request.Size
+            originalSize: request.Size,
+            originalStorageUrl: url
         );
 
         await _repository.AddAsync(audioFile, cancellationToken);

@@ -29,4 +29,7 @@ export interface AudioResult {
   transcription: Transcription | null
   summary: Summary | null
   validationErrorMessage?: string | null
+  originalAudioUrl?: string | null
+  filteredAudioUrl?: string | null
+  originalFileName?: string | null
 }

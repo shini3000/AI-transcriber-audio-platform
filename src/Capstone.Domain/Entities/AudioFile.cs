@@ -17,6 +17,8 @@ public class AudioFile
     public DateTime? CompressedAt { get; set; }
     public long CompressionDurationMs { get; set; }
     public DateTime? ProcessedAt { get; set; }
+    public string? OriginalStorageUrl { get; set; }
+    public string? FilteredStorageUrl { get; set; }
 
     public static AudioFile Create(
         string fileName,
@@ -25,7 +27,8 @@ public class AudioFile
         string storageUrl,
         string? originalFileName = null,
         string? originalContentType = null,
-        long? originalSize = null)
+        long? originalSize = null,
+        string? originalStorageUrl = null)
     {
         return new AudioFile
         {
@@ -34,6 +37,7 @@ public class AudioFile
             ContentType = contentType,
             Size = size,
             StorageUrl = storageUrl,
+            OriginalStorageUrl = originalStorageUrl ?? storageUrl,
             UploadedAt = DateTime.UtcNow,
             OriginalFileName = originalFileName ?? fileName,
             OriginalContentType = originalContentType ?? contentType,

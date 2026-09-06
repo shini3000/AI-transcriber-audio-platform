@@ -62,10 +62,15 @@ public class AudioCompressionProcessor
 
             if (audioFile != null)
             {
+                if (string.IsNullOrEmpty(audioFile.OriginalStorageUrl))
+                {
+                    audioFile.OriginalStorageUrl = message.StorageUrl;
+                }
                 audioFile.FileName = compressedFileName;
                 audioFile.ContentType = "audio/aac";
                 audioFile.Size = compressedSize;
                 audioFile.StorageUrl = compressedStorageUrl;
+                audioFile.FilteredStorageUrl = compressedStorageUrl;
                 audioFile.CompressedAt = DateTime.UtcNow;
                 audioFile.CompressionDurationMs = (long)duration.TotalMilliseconds;
 

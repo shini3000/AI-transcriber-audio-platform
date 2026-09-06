@@ -1,4 +1,5 @@
 using Capstone.Application.DTOs;
+using Capstone.Application.Interfaces;
 using Capstone.Application.UseCases;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,15 +12,21 @@ public class AudioController : ControllerBase
     private readonly UploadAudioUseCase _useCase;
     private readonly GetAudioResultUseCase _getResultUseCase;
     private readonly GetAudioFilesListUseCase _getListUseCase;
+    private readonly IAudioFileRepository _repository;
+    private readonly IFileStorageService _storageService;
 
     public AudioController(
         UploadAudioUseCase useCase,
         GetAudioResultUseCase getResultUseCase,
-        GetAudioFilesListUseCase getListUseCase)
+        GetAudioFilesListUseCase getListUseCase,
+        IAudioFileRepository repository,
+        IFileStorageService storageService)
     {
         _useCase = useCase;
         _getResultUseCase = getResultUseCase;
         _getListUseCase = getListUseCase;
+        _repository = repository;
+        _storageService = storageService;
     }
 
     [HttpPost("upload")]
@@ -71,5 +78,61 @@ public class AudioController : ControllerBase
     {
         var response = await _getListUseCase.ExecuteAsync(cancellationToken);
         return Ok(response);
+    }
+
+    [HttpGet("{id}/stream/{variant}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Stream(
+        string id,
+        string variant,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(id, out var audioFileId))
+            return BadRequest(new { error = "Invalid audio file id." });
+
+        var audioFile = await _repository.GetByIdAsync(audioFileId);
+        if (audioFile is null)
+            return NotFound(new { error = "Audio file not found." });
+
+        string? storageUrl;
+        string contentType;
+
+        if (string.Equals(variant, "original", StringComparison.OrdinalIgnoreCase))
+        {
+            storageUrl = !string.IsNullOrEmpty(audioFile.OriginalStorageUrl)
+                ? audioFile.OriginalStorageUrl
+                : audioFile.StorageUrl;
+            contentType = !string.IsNullOrEmpty(audioFile.OriginalContentType)
+                ? audioFile.OriginalContentType
+                : "audio/mpeg";
+        }
+        else if (string.Equals(variant, "filtered", StringComparison.OrdinalIgnoreCase))
+        {
+            storageUrl = !string.IsNullOrEmpty(audioFile.FilteredStorageUrl)
+                ? audioFile.FilteredStorageUrl
+                : audioFile.StorageUrl;
+            contentType = !string.IsNullOrEmpty(audioFile.ContentType)
+                ? audioFile.ContentType
+                : "audio/aac";
+        }
+        else
+        {
+            return BadRequest(new { error = "Variant must be 'original' or 'filtered'." });
+        }
+
+        if (string.IsNullOrEmpty(storageUrl))
+            return NotFound(new { error = "Storage URL not available for requested variant." });
+
+        try
+        {
+            var stream = await _storageService.GetFileStreamAsync(storageUrl, cancellationToken);
+            return File(stream, contentType, enableRangeProcessing: true);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = $"Error streaming audio: {ex.Message}" });
+        }
     }
 }

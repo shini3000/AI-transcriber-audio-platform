@@ -72,6 +72,7 @@ public class GetAudioFilesListUseCaseTests
         var item2 = result[1];
         Assert.Equal("ready", item2.Status);
         Assert.Equal(AudioFileId1, item2.AudioFileId);
+        Assert.Equal($"/api/audio/{AudioFileId1}/stream/original", item2.OriginalAudioUrl);
         Assert.NotNull(item2.Transcription);
         Assert.Equal("Transcription 1", item2.Transcription!.FullText);
         Assert.NotNull(item2.Summary);

@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("uploaded");
             entity.Property(e => e.ValidationErrorMessage).HasMaxLength(500);
             entity.Property(e => e.ValidatedAt);
+            entity.Property(e => e.OriginalStorageUrl).HasMaxLength(500);
+            entity.Property(e => e.FilteredStorageUrl).HasMaxLength(500);
         });
     }
 }
